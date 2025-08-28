@@ -63,7 +63,6 @@ export function UserNav({ user, profile }: UserNavProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push("/profile")}>个人资料</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/settings")}>设置</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>退出登录</DropdownMenuItem>
       </DropdownMenuContent>

@@ -33,10 +33,20 @@ export function ProfileEditor({ profile }: ProfileEditorProps) {
     setError(null)
     setSaved(false)
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("未登录")
+      const email = profile.email || user.email || ""
+
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName, phone, address })
-        .eq("id", profile.id)
+        .upsert(
+          { id: profile.id, email, full_name: fullName, phone, address, user_type: profile.user_type },
+          { onConflict: "id" }
+        )
+        .select()
+        .single()
       if (error) throw error
       setSaved(true)
     } catch (err: any) {

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProfileEditor } from "@/components/profile/profile-editor"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -13,14 +14,14 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle()
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">个人资料</h1>
 
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>账户信息</CardTitle>
           </CardHeader>
@@ -51,6 +52,17 @@ export default async function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        <ProfileEditor
+          profile={{
+            id: user.id,
+            email: profile?.email || user.email || undefined,
+            full_name: profile?.full_name || undefined,
+            phone: profile?.phone || undefined,
+            address: profile?.address || undefined,
+            user_type: profile?.user_type || "buyer",
+          }}
+        />
       </div>
     </div>
   )
