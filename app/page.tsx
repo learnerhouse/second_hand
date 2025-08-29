@@ -35,6 +35,19 @@ export default async function HomePage({
       .eq("is_active", true)
       .order("sort_order")
 
+    // 计算各分类商品数量（仅统计上架 active 商品）
+    const { data: productCats } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("status", "active")
+
+    const countMap = new Map<string, number>()
+    ;(productCats || []).forEach((row: any) => {
+      if (!row?.category_id) return
+      countMap.set(row.category_id, (countMap.get(row.category_id) || 0) + 1)
+    })
+    const categoriesWithCount = (categories || []).map((c: any) => ({ ...c, count: countMap.get(c.id) || 0 }))
+
     let query = supabase
       .from("products")
       .select(`
@@ -103,7 +116,7 @@ export default async function HomePage({
 
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="lg:w-64 flex-shrink-0">
-              <CategoryFilter categories={categories || []} selectedCategory={searchParams.category} />
+              <CategoryFilter categories={categoriesWithCount} selectedCategory={searchParams.category} />
             </div>
 
             <div className="flex-1">
