@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { SellerLayout } from "@/components/seller/seller-layout"
+import { AccountLayout } from "@/components/account/account-layout"
 import { ProductForm } from "@/components/seller/product-form"
 
 export default async function NewProductPage() {
@@ -22,7 +22,7 @@ export default async function NewProductPage() {
   const { data: categories } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order")
 
   return (
-    <SellerLayout user={user} profile={profile}>
+    <AccountLayout user={user} profile={profile}>
       <div className="max-w-2xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">发布新商品</h1>
@@ -30,7 +30,7 @@ export default async function NewProductPage() {
         </div>
         <ProductForm categories={categories || []} />
       </div>
-    </SellerLayout>
+    </AccountLayout>
   )
 }
 
