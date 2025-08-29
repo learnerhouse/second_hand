@@ -8,7 +8,8 @@ interface MarketplaceHeaderProps {
   profile?: {
     full_name?: string
     avatar_url?: string
-    user_type: string
+    user_type?: string
+    role?: string
   } | null
 }
 
@@ -46,7 +47,7 @@ export function MarketplaceHeader({ user, profile }: MarketplaceHeaderProps) {
                 <Button asChild>
                   <Link href="/products/new">上传商品</Link>
                 </Button>
-                {(profile as any)?.role === "admin" || profile?.user_type === "admin" ? (
+                {profile?.role === "admin" || profile?.user_type === "admin" ? (
                   <Button asChild variant="outline">
                     <Link href="/admin">管理后台</Link>
                   </Button>
