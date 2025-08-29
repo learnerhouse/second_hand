@@ -46,8 +46,8 @@ export function NewMessageForm({ product, seller, currentUser }: NewMessageFormP
 
       if (error) throw error
 
-      // 重定向到对话页面
-      const conversationId = `${product.id}-${seller.id}`
+      // 重定向到对话页面（使用下划线分隔，避免 UUID 自带连字符冲突）
+      const conversationId = `${product.id}_${seller.id}`
       router.push(`/messages/${conversationId}`)
     } catch (error: any) {
       setError(error.message)

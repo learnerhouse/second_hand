@@ -20,8 +20,8 @@ export default async function ConversationPage({
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // 解析对话ID
-  const [productId, partnerId] = params.conversationId.split("-")
+  // 解析对话ID（下划线分隔，避免与 UUID 的连字符冲突）
+  const [productId, partnerId] = params.conversationId.split("_")
 
   if (!productId || !partnerId) {
     notFound()
