@@ -19,7 +19,8 @@ interface User {
   avatar_url?: string
   phone?: string
   address?: string
-  user_type: string
+  user_type?: string
+  role?: string
   is_verified: boolean
   created_at: string
 }
@@ -32,7 +33,7 @@ export function UsersManagement({ users }: UsersManagementProps) {
   const router = useRouter()
   const supabase = createClient()
   const [searchTerm, setSearchTerm] = useState("")
-  const [userTypeFilter, setUserTypeFilter] = useState("all")
+  const [roleFilter, setRoleFilter] = useState("all")
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
@@ -40,18 +41,19 @@ export function UsersManagement({ users }: UsersManagementProps) {
     const matchesSearch =
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesType = userTypeFilter === "all" || user.user_type === userTypeFilter
-    return matchesSearch && matchesType
+    const effectiveRole = (user.role as string) || (user.user_type === "admin" ? "admin" : "user")
+    const matchesRole = roleFilter === "all" || effectiveRole === roleFilter
+    return matchesSearch && matchesRole
   })
 
-  const handleChangeUserType = async (userId: string, newType: string) => {
+  const handleChangeRole = async (userId: string, newRole: "user" | "reviewer" | "admin") => {
     setIsLoading(userId)
     try {
-      const { error } = await supabase.from("profiles").update({ user_type: newType }).eq("id", userId)
+      const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
       if (error) throw error
       router.refresh()
     } catch (error) {
-      console.error("Error updating user type:", error)
+      console.error("Error updating user role:", error)
     } finally {
       setIsLoading(null)
     }
@@ -70,26 +72,25 @@ export function UsersManagement({ users }: UsersManagementProps) {
     }
   }
 
-  const getUserTypeColor = (userType: string) => {
-    switch (userType) {
+  const getRoleColor = (role: string) => {
+    switch (role) {
       case "admin":
         return "bg-red-100 text-red-800"
-      case "seller":
+      case "reviewer":
         return "bg-blue-100 text-blue-800"
-      case "buyer":
-        return "bg-green-100 text-green-800"
+      case "user":
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  const getUserTypeText = (userType: string) => {
-    const typeMap: { [key: string]: string } = {
+  const getRoleText = (role: string) => {
+    const map: { [key: string]: string } = {
       admin: "管理员",
-      seller: "卖家",
-      buyer: "买家",
+      reviewer: "审核员",
+      user: "用户",
     }
-    return typeMap[userType] || userType
+    return map[role] || role
   }
 
   return (
@@ -114,14 +115,14 @@ export function UsersManagement({ users }: UsersManagementProps) {
                 />
               </div>
             </div>
-            <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部用户</SelectItem>
-                <SelectItem value="buyer">买家</SelectItem>
-                <SelectItem value="seller">卖家</SelectItem>
+                <SelectItem value="user">用户</SelectItem>
+                <SelectItem value="reviewer">审核员</SelectItem>
                 <SelectItem value="admin">管理员</SelectItem>
               </SelectContent>
             </Select>
@@ -177,7 +178,9 @@ export function UsersManagement({ users }: UsersManagementProps) {
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <Badge className={getUserTypeColor(user.user_type)}>{getUserTypeText(user.user_type)}</Badge>
+                        <Badge className={getRoleColor((user.role as string) || (user.user_type === "admin" ? "admin" : "user"))}>
+                          {getRoleText((user.role as string) || (user.user_type === "admin" ? "admin" : "user"))}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -217,30 +220,31 @@ export function UsersManagement({ users }: UsersManagementProps) {
                               用户：{selectedUser?.full_name || selectedUser?.email}
                             </p>
                             <p className="text-sm text-gray-600 mb-4">
-                              当前权限：{selectedUser && getUserTypeText(selectedUser.user_type)}
+                              当前权限：
+                              {selectedUser && getRoleText((selectedUser.role as string) || (selectedUser.user_type === "admin" ? "admin" : "user"))}
                             </p>
                           </div>
                           <div className="space-y-2">
                             <Button
                               variant="outline"
                               className="w-full justify-start bg-transparent"
-                              onClick={() => selectedUser && handleChangeUserType(selectedUser.id, "buyer")}
+                              onClick={() => selectedUser && handleChangeRole(selectedUser.id, "user")}
                               disabled={isLoading === selectedUser?.id}
                             >
-                              设为买家
+                              设为用户
                             </Button>
                             <Button
                               variant="outline"
                               className="w-full justify-start bg-transparent"
-                              onClick={() => selectedUser && handleChangeUserType(selectedUser.id, "seller")}
+                              onClick={() => selectedUser && handleChangeRole(selectedUser.id, "reviewer")}
                               disabled={isLoading === selectedUser?.id}
                             >
-                              设为卖家
+                              设为审核员
                             </Button>
                             <Button
                               variant="outline"
                               className="w-full justify-start bg-transparent"
-                              onClick={() => selectedUser && handleChangeUserType(selectedUser.id, "admin")}
+                              onClick={() => selectedUser && handleChangeRole(selectedUser.id, "admin")}
                               disabled={isLoading === selectedUser?.id}
                             >
                               设为管理员

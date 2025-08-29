@@ -16,12 +16,15 @@ export default async function AdminUsersPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile || profile.user_type !== "admin") {
+  if (!profile || (profile.role !== "admin" && profile.user_type !== "admin")) {
     redirect("/marketplace")
   }
 
   // 获取所有用户
-  const { data: users } = await supabase.from("profiles").select("*").order("created_at", { ascending: false })
+  const { data: users } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, avatar_url, phone, address, user_type, role, is_verified, created_at")
+    .order("created_at", { ascending: false })
 
   return (
     <AdminLayout user={user} profile={profile}>

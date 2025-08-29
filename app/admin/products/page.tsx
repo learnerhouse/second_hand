@@ -25,7 +25,10 @@ export default async function AdminProductsPage({
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile || profile.user_type !== "admin") {
+  // 允许 admin 与 reviewer 访问商品审核页；兼容旧的 user_type=admin
+  const isAdmin = profile?.role === "admin" || profile?.user_type === "admin"
+  const isReviewer = profile?.role === "reviewer"
+  if (!profile || (!isAdmin && !isReviewer)) {
     redirect("/marketplace")
   }
 

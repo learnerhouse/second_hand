@@ -16,9 +16,10 @@ interface Category {
 interface CategoryFilterProps {
   categories: Category[]
   selectedCategory?: string
+  totalCount?: number
 }
 
-export function CategoryFilter({ categories, selectedCategory }: CategoryFilterProps) {
+export function CategoryFilter({ categories, selectedCategory, totalCount }: CategoryFilterProps) {
   const searchParams = useSearchParams()
 
   const createCategoryUrl = (categoryId?: string) => {
@@ -34,7 +35,8 @@ export function CategoryFilter({ categories, selectedCategory }: CategoryFilterP
     return `/marketplace?${params.toString()}`
   }
 
-  const totalCount = categories.reduce((sum, cat) => sum + (cat.count || 0), 0)
+  const computedTotal =
+    typeof totalCount === "number" ? totalCount : categories.reduce((sum, cat) => sum + (cat.count || 0), 0)
 
   return (
     <Card>
@@ -51,7 +53,7 @@ export function CategoryFilter({ categories, selectedCategory }: CategoryFilterP
         >
           <span className="font-medium">全部商品</span>
           <Badge variant="secondary" className="ml-2">
-            {totalCount}
+            {computedTotal}
           </Badge>
         </Link>
 

@@ -1,78 +1,157 @@
 import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProductGrid } from "@/components/marketplace/product-grid"
+import { CategoryFilter } from "@/components/marketplace/category-filter"
+import { SearchBar } from "@/components/marketplace/search-bar"
+import { MarketplaceHeader } from "@/components/marketplace/marketplace-header"
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+interface SearchParams {
+  category?: string
+  search?: string
+  page?: string
+  sort?: string
+}
 
-  if (user) {
-    // 根据用户类型重定向到相应界面
-    const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", user.id).single()
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  try {
+    const supabase = await createClient()
 
-    if (profile?.user_type === "admin") {
-      redirect("/admin")
-    } else if (profile?.user_type === "seller") {
-      redirect("/seller")
-    } else {
-      redirect("/marketplace")
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    let profile = null
+    if (user) {
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle()
+      profile = data
     }
-  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">欢迎来到二手交易平台</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">发现优质二手物品，分享专业技能，展示精美手工艺品</p>
-        </div>
+    const { data: categories } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order")
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <Card className="text-center">
-            <CardHeader>
-              <div className="text-4xl mb-4">📦</div>
-              <CardTitle>二手物品</CardTitle>
-              <CardDescription>发现各种优质二手商品，环保又实惠</CardDescription>
-            </CardHeader>
-          </Card>
+    // 计算各分类商品数量（仅统计上架 active 商品）
+    const { data: productCats } = await supabase
+      .from("products")
+      .select("category_id")
+      .eq("status", "active")
 
-          <Card className="text-center">
-            <CardHeader>
-              <div className="text-4xl mb-4">🛠️</div>
-              <CardTitle>技能服务</CardTitle>
-              <CardDescription>分享你的专业技能，或找到需要的服务</CardDescription>
-            </CardHeader>
-          </Card>
+    const countMap = new Map<string, number>()
+    ;(productCats || []).forEach((row: any) => {
+      if (!row?.category_id) return
+      countMap.set(row.category_id, (countMap.get(row.category_id) || 0) + 1)
+    })
+    const categoriesWithCount = (categories || []).map((c: any) => ({ ...c, count: countMap.get(c.id) || 0 }))
 
-          <Card className="text-center">
-            <CardHeader>
-              <div className="text-4xl mb-4">🎨</div>
-              <CardTitle>手工艺品</CardTitle>
-              <CardDescription>展示和购买独特的手工制作艺术品</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+    let query = supabase
+      .from("products")
+      .select(`
+        *,
+        seller:profiles!seller_id(full_name, avatar_url),
+        category:categories(name, icon)
+      `)
+      .eq("status", "active")
 
-        <div className="text-center space-y-4">
-          <div className="space-x-4">
-            <Button asChild size="lg">
-              <Link href="/auth/login">登录</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/auth/sign-up">注册</Link>
-            </Button>
+    if (searchParams.category) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(searchParams.category)
+      if (isUUID) {
+        query = query.eq("category_id", searchParams.category)
+      } else {
+        const { data: categoryData } = await supabase
+          .from("categories")
+          .select("id")
+          .eq("name", searchParams.category)
+          .single()
+        if (categoryData) {
+          query = query.eq("category_id", categoryData.id)
+        } else {
+          query = query.eq("category_id", "00000000-0000-0000-0000-000000000000")
+        }
+      }
+    }
+
+    if (searchParams.search) {
+      query = query.or(`title.ilike.%${searchParams.search}%,description.ilike.%${searchParams.search}%`)
+    }
+
+    const sort = searchParams.sort || "created_at"
+    if (sort === "price_asc") {
+      query = query.order("price", { ascending: true })
+    } else if (sort === "price_desc") {
+      query = query.order("price", { ascending: false })
+    } else if (sort === "popular") {
+      query = query.order("view_count", { ascending: false })
+    } else {
+      query = query.order("created_at", { ascending: false })
+    }
+
+    const { data: products, error } = await query
+
+    if (error) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">加载失败</h2>
+            <p className="text-gray-600 mb-4">无法加载商品数据，请稍后重试</p>
+            <p className="text-sm text-gray-500">错误信息: {error.message}</p>
           </div>
-          <p className="text-sm text-gray-500">
-            <Link href="/marketplace" className="text-blue-600 hover:underline">
-              先浏览商品
-            </Link>
-          </p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <MarketplaceHeader user={user} profile={profile} />
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">商品市场</h1>
+            <SearchBar initialSearch={searchParams.search} />
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="lg:w-64 flex-shrink-0">
+              <CategoryFilter
+                categories={categoriesWithCount}
+                selectedCategory={searchParams.category}
+                totalCount={products?.length || 0}
+              />
+            </div>
+
+            <div className="flex-1">
+              {!products || products.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">暂无商品</h3>
+                  <p className="text-gray-500 mb-6">目前还没有商品发布，请稍后再来查看</p>
+                </div>
+              ) : (
+                <ProductGrid products={products} currentSort={searchParams.sort} />
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  } catch (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">系统错误</h2>
+          <p className="text-gray-600 mb-4">页面加载时发生了意外错误</p>
+          <p className="text-sm text-gray-500">请刷新页面重试</p>
+        </div>
+      </div>
+    )
+  }
 }
+ 

@@ -16,14 +16,14 @@ export default async function AdminPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile || profile.user_type !== "admin") {
+  if (!profile || (profile.role !== "admin" && profile.user_type !== "admin")) {
     redirect("/marketplace")
   }
 
   // 获取平台统计数据
   const { data: products } = await supabase.from("products").select("id, status, created_at, price")
 
-  const { data: users } = await supabase.from("profiles").select("id, user_type, created_at")
+  const { data: users } = await supabase.from("profiles").select("id, user_type, role, created_at")
 
   const { data: orders } = await supabase.from("orders").select("id, status, total_price, created_at")
 
