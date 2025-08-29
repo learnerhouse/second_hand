@@ -48,12 +48,9 @@ export default async function ConversationPage({
     .single()
   
 
-  // 获取对话伙伴信息
-  const { data: partner } = await supabase.from("profiles").select("*").eq("id", partnerId).single()
-
-  if (!partner) {
-    notFound()
-  }
+  // 获取对话伙伴信息（若不可见则使用占位对象，避免 404）
+  const { data: partnerData } = await supabase.from("profiles").select("*").eq("id", partnerId).maybeSingle()
+  const partner = partnerData || { id: partnerId, full_name: "用户", avatar_url: null }
 
   // 获取对话消息
   const { data: messages } = await supabase
