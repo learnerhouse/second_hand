@@ -2,7 +2,7 @@ import type React from "react"
 import Link from "next/link"
 import { UserNav } from "@/components/auth/user-nav"
 import { Button } from "@/components/ui/button"
-import { Package, Plus, MessageSquare, User, Home } from "lucide-react"
+import { Package, Plus, MessageSquare, User, Home, Heart } from "lucide-react"
 import type { User as SupaUser } from "@supabase/supabase-js"
 
 interface AccountLayoutProps {
@@ -15,6 +15,7 @@ export function AccountLayout({ children, user, profile }: AccountLayoutProps) {
   const navigation = [
     { name: "我的商品", href: "/products/mine", icon: Package },
     { name: "上传商品", href: "/products/new", icon: Plus },
+    { name: "我的收藏", href: "/products/favorites", icon: Heart },
     { name: "消息中心", href: "/messages", icon: MessageSquare },
     { name: "个人资料", href: "/profile", icon: User },
   ]

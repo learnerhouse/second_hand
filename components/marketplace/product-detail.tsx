@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { ProductCard } from "./product-card"
 import { MessageCircle, Heart, Share2, MapPin, Calendar, Eye } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase/client"
 
 interface ProductDetailProps {
   product: any
@@ -20,7 +21,10 @@ interface ProductDetailProps {
 
 export function ProductDetail({ product, relatedProducts, currentUser, currentProfile }: ProductDetailProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [favLoading, setFavLoading] = useState(false)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("zh-CN", {
@@ -62,6 +66,51 @@ export function ProductDetail({ product, relatedProducts, currentUser, currentPr
     }
     // 这里将实现购买功能
     router.push(`/checkout?product=${product.id}`)
+  }
+
+  useEffect(() => {
+    const loadFavorite = async () => {
+      if (!currentUser) return
+      const { data } = await supabase
+        .from("favorites")
+        .select("product_id")
+        .eq("user_id", currentUser.id)
+        .eq("product_id", product.id)
+        .maybeSingle()
+      setIsFavorited(!!data)
+    }
+    loadFavorite()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, product.id])
+
+  const handleToggleFavorite = async () => {
+    if (!currentUser) {
+      router.push("/auth/login")
+      return
+    }
+    if (favLoading) return
+    setFavLoading(true)
+    try {
+      if (isFavorited) {
+        const { error } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("user_id", currentUser.id)
+          .eq("product_id", product.id)
+        if (error) throw error
+        setIsFavorited(false)
+      } else {
+        const { error } = await supabase
+          .from("favorites")
+          .insert([{ user_id: currentUser.id, product_id: product.id }])
+        if (error) throw error
+        setIsFavorited(true)
+      }
+    } catch (e) {
+      // 可添加 UI 提示
+    } finally {
+      setFavLoading(false)
+    }
   }
 
   return (
@@ -173,9 +222,9 @@ export function ProductDetail({ product, relatedProducts, currentUser, currentPr
             )}
 
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+              <Button onClick={handleToggleFavorite} variant="outline" size="sm" className={`flex-1 ${isFavorited ? "text-red-600" : ""} bg-transparent`} disabled={favLoading}>
                 <Heart className="h-4 w-4 mr-2" />
-                收藏
+                {isFavorited ? "已收藏" : "收藏"}
               </Button>
               <Button variant="outline" size="sm" className="flex-1 bg-transparent">
                 <Share2 className="h-4 w-4 mr-2" />
