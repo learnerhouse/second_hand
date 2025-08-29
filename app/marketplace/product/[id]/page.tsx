@@ -21,8 +21,8 @@ export default async function ProductDetailPage({
     profile = data
   }
 
-  // 获取商品详情
-  const { data: product, error } = await supabase
+  // 优先获取公开商品（active）
+  const { data: activeProduct } = await supabase
     .from("products")
     .select(`
       *,
@@ -31,17 +31,38 @@ export default async function ProductDetailPage({
     `)
     .eq("id", params.id)
     .eq("status", "active")
-    .single()
+    .maybeSingle()
 
-  if (error || !product) {
+  let product = activeProduct
+
+  // 若不是公开商品，且当前用户为所有者，则允许查看
+  if (!product && user) {
+    const { data: ownerProduct } = await supabase
+      .from("products")
+      .select(`
+        *,
+        seller:profiles!seller_id(id, full_name, avatar_url, phone, created_at),
+        category:categories(name, icon)
+      `)
+      .eq("id", params.id)
+      .eq("seller_id", user.id)
+      .maybeSingle()
+    product = ownerProduct || null
+  }
+
+  if (!product) {
     notFound()
   }
 
   // 增加浏览次数
-  await supabase
-    .from("products")
-    .update({ view_count: (product.view_count || 0) + 1 })
-    .eq("id", params.id)
+  const isOwner = user && product.seller_id === user.id
+  if (!isOwner && product.status === "active") {
+    const { error: viewErr } = await supabase
+      .from("products")
+      .update({ view_count: (product.view_count || 0) + 1 })
+      .eq("id", params.id)
+    // 忽略 RLS 导致的更新失败，避免影响详情页访问
+  }
 
   // 获取相关商品
   const { data: relatedProducts } = await supabase
