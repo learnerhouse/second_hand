@@ -154,8 +154,4 @@ export default async function HomePage({
     )
   }
 }
-import { redirect } from "next/navigation"
-
-export default async function HomePage() {
-  redirect("/marketplace")
-}
+ 
