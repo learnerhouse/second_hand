@@ -61,18 +61,13 @@ export function CheckoutClient() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) throw new Error("未登录")
-      const { error } = await supabase.from("orders").insert([
-        {
-          product_id: product.id,
-          buyer_id: user.id,
-          seller_id: product.seller_id,
-          quantity,
-          total_price: total,
-          shipping_address: address || null,
-        },
-      ])
+      const { error } = await supabase.rpc("place_order", {
+        product_id: product.id,
+        quantity,
+        shipping_address: address || null,
+      })
       if (error) throw error
-      router.push("/messages")
+      router.push(`/marketplace/product/${product.id}`)
     } catch (err: any) {
       setError(err.message)
     } finally {
