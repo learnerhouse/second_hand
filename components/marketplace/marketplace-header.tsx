@@ -46,11 +46,11 @@ export function MarketplaceHeader({ user, profile }: MarketplaceHeaderProps) {
                 <Button asChild>
                   <Link href="/products/new">上传商品</Link>
                 </Button>
-                {profile?.user_type === "admin" && (
+                {(profile as any)?.role === "admin" || profile?.user_type === "admin" ? (
                   <Button asChild variant="outline">
                     <Link href="/admin">管理后台</Link>
                   </Button>
-                )}
+                ) : null}
                 <UserNav user={user} profile={profile} />
               </>
             ) : (
