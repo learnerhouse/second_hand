@@ -116,7 +116,11 @@ export default async function HomePage({
 
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="lg:w-64 flex-shrink-0">
-              <CategoryFilter categories={categoriesWithCount} selectedCategory={searchParams.category} />
+              <CategoryFilter
+                categories={categoriesWithCount}
+                selectedCategory={searchParams.category}
+                totalCount={products?.length || 0}
+              />
             </div>
 
             <div className="flex-1">
