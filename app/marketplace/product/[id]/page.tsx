@@ -50,6 +50,29 @@ export default async function ProductDetailPage({
     product = ownerProduct || null
   }
 
+  // 若仍不可见，且当前用户是该商品的买家（已下单），也允许查看（例如已售出）
+  if (!product && user) {
+    const { data: buyerOrder } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("product_id", params.id)
+      .eq("buyer_id", user.id)
+      .maybeSingle()
+
+    if (buyerOrder) {
+      const { data: buyerViewProduct } = await supabase
+        .from("products")
+        .select(`
+          *,
+          seller:profiles!seller_id(id, full_name, avatar_url, phone, created_at),
+          category:categories(name, icon)
+        `)
+        .eq("id", params.id)
+        .maybeSingle()
+      product = buyerViewProduct || null
+    }
+  }
+
   if (!product) {
     notFound()
   }
