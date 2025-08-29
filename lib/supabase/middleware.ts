@@ -44,6 +44,7 @@ export async function updateSession(request: NextRequest) {
     path === "/" ||
     path.startsWith("/auth") ||
     path.startsWith("/marketplace") ||
+    path.startsWith("/users") ||
     path.startsWith("/api/public")
 
   if (!isPublicRoute && !user) {

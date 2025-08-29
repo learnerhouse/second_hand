@@ -40,11 +40,12 @@ export function MarketplaceHeader({ user, profile }: MarketplaceHeaderProps) {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                {profile?.user_type === "seller" && (
-                  <Button asChild variant="outline">
-                    <Link href="/seller">卖家中心</Link>
-                  </Button>
-                )}
+                <Button asChild variant="outline">
+                  <Link href="/products/mine">我的商品</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/products/new">上传商品</Link>
+                </Button>
                 {profile?.user_type === "admin" && (
                   <Button asChild variant="outline">
                     <Link href="/admin">管理后台</Link>
