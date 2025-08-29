@@ -36,7 +36,7 @@ export default async function ConversationPage({
     notFound()
   }
 
-  // 获取商品信息
+  // 获取商品信息（若因RLS不可见，则使用占位数据继续展示对话）
   const { data: product } = await supabase
     .from("products")
     .select(`
@@ -46,10 +46,7 @@ export default async function ConversationPage({
     `)
     .eq("id", productId)
     .single()
-
-  if (!product) {
-    notFound()
-  }
+  
 
   // 获取对话伙伴信息
   const { data: partner } = await supabase.from("profiles").select("*").eq("id", partnerId).single()
@@ -83,7 +80,18 @@ export default async function ConversationPage({
   return (
     <MessagesLayout user={user} profile={profile}>
       <ConversationView
-        product={product}
+        product={
+          product || {
+            id: productId,
+            title: "商品不可见或已下架",
+            images: [],
+            price: 0,
+            location: undefined,
+            condition: undefined,
+            category: { name: "-", icon: "" },
+            seller: { id: partnerId, full_name: partner?.full_name, avatar_url: partner?.avatar_url },
+          }
+        }
         partner={partner}
         messages={messages || []}
         currentUser={user}
