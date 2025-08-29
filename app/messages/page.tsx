@@ -35,9 +35,20 @@ export default async function MessagesPage() {
     const key = `${message.product_id}_${partnerId}`
 
     if (!groupedConversations.has(key)) {
+      const safeProduct = message.product || {
+        id: message.product_id,
+        title: "商品不可见或已下架",
+        images: [],
+        price: 0,
+      }
+      const safePartner = (message.sender_id === user.id ? message.receiver : message.sender) || {
+        id: partnerId,
+        full_name: "用户",
+        avatar_url: null,
+      }
       groupedConversations.set(key, {
-        product: message.product,
-        partner: message.sender_id === user.id ? message.receiver : message.sender,
+        product: safeProduct,
+        partner: safePartner,
         lastMessage: message,
         unreadCount: 0,
         messages: [],
