@@ -328,7 +328,11 @@ export default async function MarketplacePage({
           <div className="flex flex-col lg:flex-row gap-8">
             {/* 侧边栏筛选 */}
             <div className="lg:w-64 flex-shrink-0">
-              <CategoryFilter categories={categories || []} selectedCategory={searchParams.category} />
+              <CategoryFilter
+                categories={categories || []}
+                selectedCategory={searchParams.category}
+                totalCount={products?.length || 0}
+              />
             </div>
 
             {/* 商品网格 */}
