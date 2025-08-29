@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { SellerLayout } from "@/components/seller/seller-layout"
+import { AccountLayout } from "@/components/account/account-layout"
 import { ProductsManagement } from "@/components/seller/products-management"
 
 export default async function MyProductsPage() {
@@ -23,9 +23,9 @@ export default async function MyProductsPage() {
     .order("created_at", { ascending: false })
 
   return (
-    <SellerLayout user={user} profile={profile}>
+    <AccountLayout user={user} profile={profile}>
       <ProductsManagement products={products || []} />
-    </SellerLayout>
+    </AccountLayout>
   )
 }
 
