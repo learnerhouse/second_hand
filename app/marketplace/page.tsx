@@ -9,6 +9,10 @@ interface SearchParams {
   search?: string
   page?: string
   sort?: string
+  minPrice?: string
+  maxPrice?: string
+  condition?: string
+  location?: string
 }
 
 export default async function MarketplacePage({
@@ -104,16 +108,35 @@ export default async function MarketplacePage({
       query = query.or(`title.ilike.%${searchParams.search}%,description.ilike.%${searchParams.search}%`)
     }
 
-    // 应用排序
+    // 价格区间筛选
+    const minPrice = searchParams.minPrice ? Number(searchParams.minPrice) : undefined
+    const maxPrice = searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined
+    if (typeof minPrice === "number" && !Number.isNaN(minPrice)) {
+      query = query.gte("price", minPrice)
+    }
+    if (typeof maxPrice === "number" && !Number.isNaN(maxPrice)) {
+      query = query.lte("price", maxPrice)
+    }
+
+    // 状态与地区筛选
+    if (searchParams.condition) {
+      query = query.eq("condition", searchParams.condition)
+    }
+    if (searchParams.location) {
+      query = query.ilike("location", `%${searchParams.location}%`)
+    }
+
+    // 应用排序（兼容旧值）
     const sort = searchParams.sort || "created_at"
     console.log("[v0] Applying sort:", sort)
-    if (sort === "price_asc") {
+    if (sort === "price_asc" || sort === "price_low") {
       query = query.order("price", { ascending: true })
-    } else if (sort === "price_desc") {
+    } else if (sort === "price_desc" || sort === "price_high") {
       query = query.order("price", { ascending: false })
     } else if (sort === "popular") {
       query = query.order("view_count", { ascending: false })
     } else {
+      // newest 或默认
       query = query.order("created_at", { ascending: false })
     }
 
