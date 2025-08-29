@@ -77,7 +77,7 @@ export function MessagesList({ conversations, currentUser }: MessagesListProps) 
       ) : (
         <div className="space-y-4">
           {conversations.map((conversation) => {
-            const conversationId = `${conversation.product.id}-${conversation.partner.id}`
+            const conversationId = `${conversation.product.id}_${conversation.partner.id}`
             const isFromCurrentUser = conversation.lastMessage.sender_id === currentUser.id
 
             return (

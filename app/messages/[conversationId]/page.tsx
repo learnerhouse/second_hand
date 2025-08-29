@@ -21,7 +21,16 @@ export default async function ConversationPage({
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
   // 解析对话ID（下划线分隔，避免与 UUID 的连字符冲突）
-  const [productId, partnerId] = params.conversationId.split("_")
+  let productId: string | undefined
+  let partnerId: string | undefined
+  if (params.conversationId.includes("_")) {
+    ;[productId, partnerId] = params.conversationId.split("_")
+  } else if (params.conversationId.includes("-")) {
+    // 兼容旧链接
+    const parts = params.conversationId.split("-")
+    productId = parts.slice(0, 5).join("-")
+    partnerId = parts.slice(5).join("-")
+  }
 
   if (!productId || !partnerId) {
     notFound()

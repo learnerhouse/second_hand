@@ -32,7 +32,7 @@ export default async function MessagesPage() {
   const groupedConversations = new Map()
   conversations?.forEach((message) => {
     const partnerId = message.sender_id === user.id ? message.receiver_id : message.sender_id
-    const key = `${message.product_id}-${partnerId}`
+    const key = `${message.product_id}_${partnerId}`
 
     if (!groupedConversations.has(key)) {
       groupedConversations.set(key, {
