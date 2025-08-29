@@ -77,14 +77,10 @@ export default async function ProductDetailPage({
     notFound()
   }
 
-  // 增加浏览次数
+  // 增加浏览次数（使用 RPC，避免 RLS 导致的失败）
   const isOwner = user && product.seller_id === user.id
   if (!isOwner && product.status === "active") {
-    const { error: viewErr } = await supabase
-      .from("products")
-      .update({ view_count: (product.view_count || 0) + 1 })
-      .eq("id", params.id)
-    // 忽略 RLS 导致的更新失败，避免影响详情页访问
+    await supabase.rpc("increment_product_view", { pid: params.id })
   }
 
   // 获取相关商品
