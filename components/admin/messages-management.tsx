@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Search, Filter, Eye, Trash2, MessageSquare, User, Package } from "lucide-react"
+import { Search, Filter, Eye, Trash2, MessageSquare, User, Package, ChevronDown, ChevronRight, Bell } from "lucide-react"
 
 interface Message {
   id: string
@@ -19,15 +19,21 @@ interface Message {
   is_read: boolean
   created_at: string
   product?: {
+    id: string
     title: string
+    images?: string[]
   }
   sender?: {
+    id: string
     full_name: string
     email: string
+    avatar_url?: string
   }
   receiver?: {
+    id: string
     full_name: string
     email: string
+    avatar_url?: string
   }
 }
 
@@ -41,6 +47,7 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
   const [statusFilter, setStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState<"count" | "latest">("count")
   const [isLoading, setIsLoading] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
   const supabase = createClient()
 
@@ -61,25 +68,28 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
     return matchesSearch && matchesStatus
   })
 
-  // 按商品分组消息
+  // 按商品ID分组消息
   const groupedMessages = filteredMessages.reduce((groups, message) => {
-    const productTitle = message.product?.title || '未知商品'
-    if (!groups[productTitle]) {
-      groups[productTitle] = []
+    const productId = message.product_id || 'unknown'
+    if (!groups[productId]) {
+      groups[productId] = {
+        product: message.product,
+        messages: []
+      }
     }
-    groups[productTitle].push(message)
+    groups[productId].messages.push(message)
     return groups
-  }, {} as Record<string, Message[]>)
+  }, {} as Record<string, { product?: any; messages: Message[] }>)
 
   // 排序分组后的消息
-  const sortedGroupedMessages = Object.entries(groupedMessages).sort(([, messagesA], [, messagesB]) => {
+  const sortedGroupedMessages = Object.entries(groupedMessages).sort(([, groupA], [, groupB]) => {
     if (sortBy === "count") {
       // 按消息数量排序（降序）
-      return messagesB.length - messagesA.length
+      return groupB.messages.length - groupA.messages.length
     } else {
       // 按最新消息时间排序（降序）
-      const latestTimeA = Math.max(...messagesA.map(m => new Date(m.created_at).getTime()))
-      const latestTimeB = Math.max(...messagesB.map(m => new Date(m.created_at).getTime()))
+      const latestTimeA = Math.max(...groupA.messages.map(m => new Date(m.created_at).getTime()))
+      const latestTimeB = Math.max(...groupB.messages.map(m => new Date(m.created_at).getTime()))
       return latestTimeB - latestTimeA
     }
   })
@@ -91,6 +101,17 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
     const totalUnread = filteredMessages.filter(m => !m.is_read).length
     
     return { totalGroups, totalMessages, totalUnread }
+  }
+
+  // 切换分组折叠状态
+  const toggleGroupCollapse = (productId: string) => {
+    const newCollapsed = new Set(collapsedGroups)
+    if (newCollapsed.has(productId)) {
+      newCollapsed.delete(productId)
+    } else {
+      newCollapsed.add(productId)
+    }
+    setCollapsedGroups(newCollapsed)
   }
 
   // 标记消息为已读
@@ -118,8 +139,8 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
   }
 
   // 批量标记商品的所有消息为已读
-  const handleMarkAllAsRead = async (productTitle: string) => {
-    const productMessages = groupedMessages[productTitle] || []
+  const handleMarkAllAsRead = async (productId: string) => {
+    const productMessages = groupedMessages[productId]?.messages || []
     const unreadMessages = productMessages.filter(m => !m.is_read)
     
     if (unreadMessages.length === 0) {
@@ -198,6 +219,11 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
   const truncateContent = (content: string, maxLength: number = 100) => {
     if (content.length <= maxLength) return content
     return content.substring(0, maxLength) + '...'
+  }
+
+  // 获取未读消息数量
+  const getUnreadCount = (productId: string) => {
+    return groupedMessages[productId]?.messages.filter(m => !m.is_read).length || 0
   }
 
   return (
@@ -304,7 +330,7 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
         </CardContent>
       </Card>
 
-      {/* 消息列表 - 按商品分组 */}
+      {/* 消息列表 - 按商品ID分组 */}
       <Card>
         <CardHeader>
           <CardTitle>消息列表 - 按商品分组</CardTitle>
@@ -315,108 +341,176 @@ export function MessagesManagement({ messages: initialMessages }: MessagesManage
               {searchTerm || statusFilter !== "all" ? "没有找到匹配的消息" : "暂无消息"}
             </div>
           ) : (
-            <div className="space-y-6">
-              {sortedGroupedMessages.map(([productTitle, productMessages]) => (
-                <div key={productTitle} className="border rounded-lg p-4 bg-gray-50">
-                  {/* 商品标题和统计 */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-semibold text-gray-900">{productTitle}</h3>
-                      <Badge variant="outline" className="ml-2">
-                        {productMessages.length} 条消息
-                      </Badge>
-                      <Badge variant="secondary" className="ml-2">
-                        {productMessages.filter(m => !m.is_read).length} 条未读
-                      </Badge>
-                    </div>
-                    
-                    {/* 批量操作按钮 */}
-                    <div className="flex items-center space-x-2">
-                      {productMessages.filter(m => !m.is_read).length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMarkAllAsRead(productTitle)}
-                          disabled={isLoading}
-                          className="h-8 px-3 text-xs"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          全部标记已读
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 该商品的所有消息 */}
-                  <div className="space-y-3">
-                    {productMessages.map((message) => (
-                      <div key={message.id} className="border rounded-lg p-3 bg-white hover:bg-gray-50">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-2">
-                            {/* 消息头部信息 */}
-                            <div className="flex items-center space-x-4 text-sm text-gray-600">
-                              <div className="flex items-center space-x-2">
-                                <User className="h-4 w-4" />
-                                <span className="font-medium">发送者:</span>
-                                <span>{message.sender?.full_name || message.sender?.email || '未知用户'}</span>
-                              </div>
-                              
-                              <div className="flex items-center space-x-2">
-                                <User className="h-4 w-4" />
-                                <span className="font-medium">接收者:</span>
-                                <span>{message.receiver?.full_name || message.receiver?.email || '未知用户'}</span>
-                              </div>
+            <div className="space-y-4">
+              {sortedGroupedMessages.map(([productId, group]) => {
+                const isCollapsed = collapsedGroups.has(productId)
+                const unreadCount = getUnreadCount(productId)
+                const product = group.product
+                
+                return (
+                  <div key={productId} className="border rounded-lg bg-gray-50">
+                    {/* 商品标题和统计 - 可点击折叠 */}
+                    <div 
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleGroupCollapse(productId)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="relative">
+                          <Package className="h-5 w-5 text-blue-600" />
+                          {/* 未读消息红点提醒 */}
+                          {unreadCount > 0 && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>
                             </div>
-
-                            {/* 消息内容 */}
-                            <div className="bg-gray-50 rounded-md p-2">
-                              <p className="text-gray-800 text-sm">{truncateContent(message.content, 80)}</p>
-                            </div>
-
-                            {/* 消息状态和时间 */}
-                            <div className="flex items-center justify-between text-xs text-gray-500">
-                              <div className="flex items-center space-x-3">
-                                <Badge variant={message.is_read ? "default" : "secondary"} className="text-xs">
-                                  {message.is_read ? "已读" : "未读"}
-                                </Badge>
-                                <span>发送时间: {formatDate(message.created_at)}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 操作按钮 */}
-                          <div className="flex items-center space-x-2 ml-3">
-                            {!message.is_read && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleMarkAsRead(message.id)}
-                                disabled={isLoading}
-                                className="h-7 px-2 text-xs"
-                              >
-                                <Eye className="h-3 w-3 mr-1" />
-                                已读
-                              </Button>
-                            )}
-                            
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteMessage(message.id)}
-                              disabled={isLoading}
-                              className="h-7 px-2 text-xs"
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              删除
-                            </Button>
-                          </div>
+                          )}
                         </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {product?.title || `商品 ${productId}`}
+                          </h3>
+                          <span className="text-sm text-gray-500">(ID: {productId})</span>
+                        </div>
+                        
+                        <Badge variant="outline" className="ml-2">
+                          {group.messages.length} 条消息
+                        </Badge>
+                        {unreadCount > 0 && (
+                          <Badge variant="destructive" className="ml-2">
+                            {unreadCount} 条未读
+                          </Badge>
+                        )}
                       </div>
-                    ))}
+                      
+                      <div className="flex items-center space-x-3">
+                        {/* 批量操作按钮 */}
+                        {unreadCount > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleMarkAllAsRead(productId)
+                            }}
+                            disabled={isLoading}
+                            className="h-8 px-3 text-xs"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            全部标记已读
+                          </Button>
+                        )}
+                        
+                        {/* 折叠/展开图标 */}
+                        {isCollapsed ? (
+                          <ChevronRight className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 该商品的所有消息 - 可折叠 */}
+                    {!isCollapsed && (
+                      <div className="px-4 pb-4 space-y-3">
+                        {group.messages.map((message) => (
+                          <div key={message.id} className="border rounded-lg p-3 bg-white hover:bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 space-y-2">
+                                {/* 消息头部信息 */}
+                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="relative">
+                                      <User className="h-4 w-4" />
+                                      {/* 发送者头像和未读提醒 */}
+                                      {message.sender?.avatar_url && (
+                                        <div className="relative inline-block ml-1">
+                                          <img 
+                                            src={message.sender.avatar_url} 
+                                            alt="发送者头像"
+                                            className="w-6 h-6 rounded-full"
+                                          />
+                                          {!message.is_read && message.receiver_id === message.sender_id && (
+                                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="font-medium">发送者:</span>
+                                    <span>{message.sender?.full_name || message.sender?.email || '未知用户'}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center space-x-2">
+                                    <div className="relative">
+                                      <User className="h-4 w-4" />
+                                      {/* 接收者头像和未读提醒 */}
+                                      {message.receiver?.avatar_url && (
+                                        <div className="relative inline-block ml-1">
+                                          <img 
+                                            src={message.receiver.avatar_url} 
+                                            alt="接收者头像"
+                                            className="w-6 h-6 rounded-full"
+                                          />
+                                          {!message.is_read && message.receiver_id !== message.sender_id && (
+                                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="font-medium">接收者:</span>
+                                    <span>{message.receiver?.full_name || message.receiver?.email || '未知用户'}</span>
+                                  </div>
+                                </div>
+
+                                {/* 消息内容 */}
+                                <div className="bg-gray-50 rounded-md p-2">
+                                  <p className="text-gray-800 text-sm">{truncateContent(message.content, 80)}</p>
+                                </div>
+
+                                {/* 消息状态和时间 */}
+                                <div className="flex items-center justify-between text-xs text-gray-500">
+                                  <div className="flex items-center space-x-3">
+                                    <Badge variant={message.is_read ? "default" : "secondary"} className="text-xs">
+                                      {message.is_read ? "已读" : "未读"}
+                                    </Badge>
+                                    <span>发送时间: {formatDate(message.created_at)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 操作按钮 */}
+                              <div className="flex items-center space-x-2 ml-3">
+                                {!message.is_read && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleMarkAsRead(message.id)}
+                                    disabled={isLoading}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    已读
+                                  </Button>
+                                )}
+                                
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteMessage(message.id)}
+                                  disabled={isLoading}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  删除
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
