@@ -250,7 +250,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             保存草稿
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "发布中..." : "发布商品"}
+            {isLoading ? "保存中..." : (product ? "保存更改" : "发布商品")}
           </Button>
         </div>
       </div>
