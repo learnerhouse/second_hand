@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { ProductDetail } from "@/components/marketplace/product-detail"
 import { MarketplaceHeader } from "@/components/marketplace/marketplace-header"
+import { ViewCountTracker } from "@/components/marketplace/view-count-tracker"
 
 // 强制动态渲染，因为使用了 cookies
 export const dynamic = 'force-dynamic'
@@ -57,16 +58,6 @@ export default async function ProductDetailPage({
     notFound()
   }
 
-  // 增加浏览次数
-  const isOwner = user && product.seller_id === user.id
-  if (!isOwner && product.status === "active") {
-    const { error: viewErr } = await supabase
-      .from("products")
-      .update({ view_count: (product.view_count || 0) + 1 })
-      .eq("id", params.id)
-    // 忽略 RLS 导致的更新失败，避免影响详情页访问
-  }
-
   // 获取相关商品
   const { data: relatedProducts } = await supabase
     .from("products")
@@ -80,9 +71,20 @@ export default async function ProductDetailPage({
     .neq("id", params.id)
     .limit(4)
 
+  const isOwner = user && product.seller_id === user.id
+
   return (
     <div className="min-h-screen bg-gray-50">
       <MarketplaceHeader user={user} profile={profile} />
+      
+      {/* 浏览次数跟踪器 */}
+      <ViewCountTracker
+        productId={product.id}
+        initialViewCount={product.view_count || 0}
+        isOwner={isOwner}
+        isActive={product.status === "active"}
+      />
+      
       <ProductDetail
         product={product}
         relatedProducts={relatedProducts || []}
