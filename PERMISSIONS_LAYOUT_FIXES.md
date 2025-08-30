@@ -1,11 +1,25 @@
 # 权限管理页面布局修复
 
 ## 问题描述
-在 `/admin/permissions` 页面中，"权限管理"和"角色管理"标签页的布局横向超过了屏幕，导致内容显示不完整。
+在 `/admin/permissions` 页面中，"权限管理"和"角色管理"标签页的布局横向超过了屏幕，导致内容显示不完整。主要问题包括：
+
+1. **标签页布局**: 使用 `grid w-full grid-cols-3` 强制三等分宽度，在小屏幕上导致标签内容被压缩
+2. **卡片内容布局**: 使用 `flex flex-col lg:flex-row lg:items-center justify-between` 可能导致横向溢出
+3. **文本处理**: 使用 `truncate` 在某些情况下可能导致布局问题
 
 ## 修复内容
 
-### 1. 角色管理标签页
+### 1. 标签页导航布局
+- **修复前**: 使用 `grid w-full grid-cols-3` 强制三等分宽度
+- **修复后**: 改为 `flex w-full overflow-x-auto` 弹性布局
+- **改进**: 
+  - 移除了强制等宽的 `grid-cols-3`，改为弹性布局
+  - 添加了 `overflow-x-auto` 支持横向滚动（如果需要）
+  - 每个标签使用 `flex-shrink-0` 防止被压缩
+  - 图标使用 `flex-shrink-0` 保持固定大小
+  - 文本使用 `truncate` 在必要时截断
+
+### 2. 角色管理标签页
 - **修复前**: 使用 `flex flex-col lg:flex-row lg:items-center justify-between` 布局
 - **修复后**: 改为 `flex flex-col gap-4` 垂直布局
 - **改进**: 
@@ -13,7 +27,7 @@
   - 将 `truncate` 改为 `break-words` 确保长文本正确换行
   - 添加了 `mt-1` 间距改善视觉效果
 
-### 2. 权限管理标签页
+### 3. 权限管理标签页
 - **修复前**: 使用 `flex flex-col lg:flex-row lg:items-center justify-between` 布局
 - **修复后**: 改为 `flex flex-col gap-4` 垂直布局
 - **改进**: 
@@ -21,7 +35,7 @@
   - 将 `truncate` 改为 `break-words` 确保长文本正确换行
   - 添加了 `mt-1` 间距改善视觉效果
 
-### 3. 用户角色管理标签页
+### 4. 用户角色管理标签页
 - **修复前**: 使用 `flex flex-col lg:flex-row lg:items-center justify-between` 布局
 - **修复后**: 改为 `flex flex-col gap-4` 垂直布局
 - **改进**: 
@@ -31,7 +45,19 @@
 
 ## 技术细节
 
-### 布局类名变更
+### 标签页导航布局变更
+```diff
+- <TabsList className="grid w-full grid-cols-3">
++ <TabsList className="flex w-full overflow-x-auto">
+- <TabsTrigger className="flex items-center space-x-2">
++ <TabsTrigger className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+- <Shield className="h-4 w-4" />
++ <Shield className="h-4 w-4 flex-shrink-0" />
+- <span>角色管理</span>
++ <span className="truncate">角色管理</span>
+```
+
+### 卡片内容布局变更
 ```diff
 - <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 + <div className="flex flex-col gap-4">

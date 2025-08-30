@@ -372,18 +372,18 @@ export function PermissionsManagement({
       </div>
 
       <Tabs defaultValue="roles" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="roles" className="flex items-center space-x-2">
-            <Shield className="h-4 w-4" />
-            <span>角色管理</span>
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="roles" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+            <Shield className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">角色管理</span>
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center space-x-2">
-            <Key className="h-4 w-4" />
-            <span>权限管理</span>
+          <TabsTrigger value="permissions" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+            <Key className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">权限管理</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
-            <span>用户角色</span>
+          <TabsTrigger value="users" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
+            <Users className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">用户角色</span>
           </TabsTrigger>
         </TabsList>
 
