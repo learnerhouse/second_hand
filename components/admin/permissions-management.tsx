@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Shield, Users, Key, CheckCircle, XCircle } from "lucide-react"
+import { Plus, Edit, Trash2, Shield, Users, Key, CheckCircle, XCircle, Settings, UserCheck } from "lucide-react"
 
 interface Role {
   id: string
@@ -104,7 +104,7 @@ export function PermissionsManagement({
   // 角色管理
   const handleAddRole = async () => {
     if (!roleFormData.name.trim()) {
-      toast.error("角色名称不能为空")
+      toast.error("请输入角色名称")
       return
     }
 
@@ -113,8 +113,7 @@ export function PermissionsManagement({
         .from("roles")
         .insert([{
           name: roleFormData.name.trim(),
-          description: roleFormData.description.trim(),
-          is_system: false
+          description: roleFormData.description.trim() || null
         }])
         .select()
         .single()
@@ -122,8 +121,8 @@ export function PermissionsManagement({
       if (error) throw error
 
       setRoles([...roles, data])
-      setIsAddRoleDialogOpen(false)
       resetRoleForm()
+      setIsAddRoleDialogOpen(false)
       toast.success("角色创建成功")
     } catch (error) {
       console.error("创建角色失败:", error)
@@ -133,7 +132,7 @@ export function PermissionsManagement({
 
   const handleEditRole = async () => {
     if (!editingRole || !roleFormData.name.trim()) {
-      toast.error("角色名称不能为空")
+      toast.error("请输入角色名称")
       return
     }
 
@@ -142,7 +141,7 @@ export function PermissionsManagement({
         .from("roles")
         .update({
           name: roleFormData.name.trim(),
-          description: roleFormData.description.trim()
+          description: roleFormData.description.trim() || null
         })
         .eq("id", editingRole.id)
 
@@ -150,12 +149,10 @@ export function PermissionsManagement({
 
       setRoles(roles.map(role => 
         role.id === editingRole.id 
-          ? { ...role, ...roleFormData }
+          ? { ...role, name: roleFormData.name.trim(), description: roleFormData.description.trim() || null }
           : role
       ))
       setIsEditRoleDialogOpen(false)
-      setEditingRole(null)
-      resetRoleForm()
       toast.success("角色更新成功")
     } catch (error) {
       console.error("更新角色失败:", error)
@@ -175,8 +172,6 @@ export function PermissionsManagement({
       if (error) throw error
 
       setRoles(roles.filter(role => role.id !== roleId))
-      // 同时删除相关的角色权限关联
-      setRolePermissions(rolePermissions.filter(rp => rp.role_id !== roleId))
       toast.success("角色删除成功")
     } catch (error) {
       console.error("删除角色失败:", error)
@@ -187,7 +182,7 @@ export function PermissionsManagement({
   // 权限管理
   const handleAddPermission = async () => {
     if (!permissionFormData.name.trim() || !permissionFormData.resource.trim() || !permissionFormData.action.trim()) {
-      toast.error("权限名称、资源和操作不能为空")
+      toast.error("请填写所有必填字段")
       return
     }
 
@@ -196,7 +191,7 @@ export function PermissionsManagement({
         .from("permissions")
         .insert([{
           name: permissionFormData.name.trim(),
-          description: permissionFormData.description.trim(),
+          description: permissionFormData.description.trim() || null,
           resource: permissionFormData.resource.trim(),
           action: permissionFormData.action.trim()
         }])
@@ -206,8 +201,8 @@ export function PermissionsManagement({
       if (error) throw error
 
       setPermissions([...permissions, data])
-      setIsAddPermissionDialogOpen(false)
       resetPermissionForm()
+      setIsAddPermissionDialogOpen(false)
       toast.success("权限创建成功")
     } catch (error) {
       console.error("创建权限失败:", error)
@@ -217,7 +212,7 @@ export function PermissionsManagement({
 
   const handleEditPermission = async () => {
     if (!editingPermission || !permissionFormData.name.trim() || !permissionFormData.resource.trim() || !permissionFormData.action.trim()) {
-      toast.error("权限名称、资源和操作不能为空")
+      toast.error("请填写所有必填字段")
       return
     }
 
@@ -226,7 +221,7 @@ export function PermissionsManagement({
         .from("permissions")
         .update({
           name: permissionFormData.name.trim(),
-          description: permissionFormData.description.trim(),
+          description: permissionFormData.description.trim() || null,
           resource: permissionFormData.resource.trim(),
           action: permissionFormData.action.trim()
         })
@@ -236,12 +231,16 @@ export function PermissionsManagement({
 
       setPermissions(permissions.map(permission => 
         permission.id === editingPermission.id 
-          ? { ...permission, ...permissionFormData }
+          ? { 
+              ...permission, 
+              name: permissionFormData.name.trim(), 
+              description: permissionFormData.description.trim() || null,
+              resource: permissionFormData.resource.trim(),
+              action: permissionFormData.action.trim()
+            }
           : permission
       ))
       setIsEditPermissionDialogOpen(false)
-      setEditingPermission(null)
-      resetPermissionForm()
       toast.success("权限更新成功")
     } catch (error) {
       console.error("更新权限失败:", error)
@@ -261,8 +260,6 @@ export function PermissionsManagement({
       if (error) throw error
 
       setPermissions(permissions.filter(permission => permission.id !== permissionId))
-      // 同时删除相关的角色权限关联
-      setRolePermissions(rolePermissions.filter(rp => rp.permission_id !== permissionId))
       toast.success("权限删除成功")
     } catch (error) {
       console.error("删除权限失败:", error)
@@ -272,8 +269,6 @@ export function PermissionsManagement({
 
   // 角色权限管理
   const handleToggleRolePermission = async (roleId: string, permissionId: string) => {
-    if (isUpdatingPermissions) return // 防止重复点击
-    
     const existingRolePermission = rolePermissions.find(
       rp => rp.role_id === roleId && rp.permission_id === permissionId
     )
@@ -365,247 +360,274 @@ export function PermissionsManagement({
   }
 
   return (
-    <div className="space-y-6 max-w-full">
-      <div>
-        <h1 className="text-2xl font-bold">权限管理</h1>
-        <p className="text-gray-600">管理系统角色、权限和用户角色分配</p>
+    <div className="space-y-6">
+      {/* 页面标题和统计信息 */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">权限管理</h1>
+          <p className="text-gray-600 mt-2">管理系统角色、权限和用户角色分配</p>
+        </div>
+        
+        {/* 统计卡片 */}
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg">
+            <Shield className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900">{roles.length} 个角色</span>
+          </div>
+          <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 rounded-lg">
+            <Key className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-green-900">{permissions.length} 个权限</span>
+          </div>
+          <div className="flex items-center space-x-2 px-3 py-2 bg-purple-50 rounded-lg">
+            <Users className="h-4 w-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-900">{users.length} 个用户</span>
+          </div>
+        </div>
       </div>
 
-      <Tabs defaultValue="roles" className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto">
-          <TabsTrigger value="roles" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
-            <Shield className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">角色管理</span>
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
-            <Key className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">权限管理</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2 flex-shrink-0 min-w-0">
-            <Users className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">用户角色</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* 主要内容区域 */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* 左侧：角色和权限管理 */}
+        <div className="xl:col-span-2 space-y-6">
+          <Tabs defaultValue="roles" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="roles" className="flex items-center space-x-2">
+                <Shield className="h-4 w-4" />
+                <span>角色管理</span>
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="flex items-center space-x-2">
+                <Key className="h-4 w-4" />
+                <span>权限管理</span>
+              </TabsTrigger>
+            </TabsList>
 
-        {/* 角色管理 */}
-        <TabsContent value="roles" className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">角色管理</h2>
-            <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetRoleForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  添加角色
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>添加新角色</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="role-name">角色名称 *</Label>
-                    <Input
-                      id="role-name"
-                      value={roleFormData.name}
-                      onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
-                      placeholder="输入角色名称"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="role-description">描述</Label>
-                    <Input
-                      id="role-description"
-                      value={roleFormData.description}
-                      onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
-                      placeholder="输入角色描述"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsAddRoleDialogOpen(false)}>
-                    取消
-                  </Button>
-                  <Button onClick={handleAddRole}>
-                    创建角色
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-4">
-            {roles.map(role => (
-              <Card key={role.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium break-words">{role.name}</h3>
-                      <p className="text-sm text-gray-600 break-words mt-1">{role.description}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <Badge variant={role.is_system ? "default" : "secondary"} className="text-xs">
-                          {role.is_system ? "系统角色" : "自定义角色"}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          创建时间: {new Date(role.created_at).toLocaleDateString()}
-                        </span>
+            {/* 角色管理 */}
+            <TabsContent value="roles" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">角色列表</h2>
+                <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetRoleForm} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      添加角色
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>添加新角色</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="role-name">角色名称 *</Label>
+                        <Input
+                          id="role-name"
+                          value={roleFormData.name}
+                          onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
+                          placeholder="输入角色名称"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="role-description">描述</Label>
+                        <Input
+                          id="role-description"
+                          value={roleFormData.description}
+                          onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
+                          placeholder="输入角色描述"
+                        />
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditRoleDialog(role)}
-                        disabled={role.is_system}
-                      >
-                        <Edit className="h-4 w-4" />
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button variant="outline" onClick={() => setIsAddRoleDialogOpen(false)}>
+                        取消
                       </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteRole(role.id)}
-                        disabled={role.is_system}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                      <Button onClick={handleAddRole}>
+                        创建角色
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-        {/* 权限管理 */}
-        <TabsContent value="permissions" className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">权限管理</h2>
-            <Dialog open={isAddPermissionDialogOpen} onOpenChange={setIsAddPermissionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetPermissionForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  添加权限
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>添加新权限</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="permission-name">权限名称 *</Label>
-                    <Input
-                      id="permission-name"
-                      value={permissionFormData.name}
-                      onChange={(e) => setPermissionFormData({ ...permissionFormData, name: e.target.value })}
-                      placeholder="输入权限名称"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="permission-description">描述</Label>
-                    <Input
-                      id="permission-description"
-                      value={permissionFormData.description}
-                      onChange={(e) => setPermissionFormData({ ...permissionFormData, description: e.target.value })}
-                      placeholder="输入权限描述"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="permission-resource">资源 *</Label>
-                    <Input
-                      id="permission-resource"
-                      value={permissionFormData.resource}
-                      onChange={(e) => setPermissionFormData({ ...permissionFormData, resource: e.target.value })}
-                      placeholder="如: products, users, orders"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="permission-action">操作 *</Label>
-                    <Input
-                      id="permission-action"
-                      value={permissionFormData.action}
-                      onChange={(e) => setPermissionFormData({ ...permissionFormData, action: e.target.value })}
-                      placeholder="如: create, read, update, delete"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsAddPermissionDialogOpen(false)}>
-                    取消
-                  </Button>
-                  <Button onClick={handleAddPermission}>
-                    创建权限
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+              <div className="grid gap-3">
+                {roles.map(role => (
+                  <Card key={role.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-medium text-gray-900">{role.name}</h3>
+                            {role.is_system && (
+                              <Badge variant="default" className="text-xs">系统</Badge>
+                            )}
+                          </div>
+                          {role.description && (
+                            <p className="text-sm text-gray-600 mb-2">{role.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>创建时间: {new Date(role.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        {!role.is_system && (
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditRoleDialog(role)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteRole(role.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
 
-          <div className="grid gap-4">
-            {permissions.map(permission => (
-              <Card key={permission.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium break-words">{permission.name}</h3>
-                      <p className="text-sm text-gray-600 break-words mt-1">{permission.description}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">{permission.resource}</Badge>
-                        <Badge variant="outline" className="text-xs">{permission.action}</Badge>
-                        <span className="text-xs text-gray-500">
-                          创建时间: {new Date(permission.created_at).toLocaleDateString()}
-                        </span>
+            {/* 权限管理 */}
+            <TabsContent value="permissions" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">权限列表</h2>
+                <Dialog open={isAddPermissionDialogOpen} onOpenChange={setIsAddPermissionDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetPermissionForm} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      添加权限
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>添加新权限</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="permission-name">权限名称 *</Label>
+                        <Input
+                          id="permission-name"
+                          value={permissionFormData.name}
+                          onChange={(e) => setPermissionFormData({ ...permissionFormData, name: e.target.value })}
+                          placeholder="输入权限名称"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="permission-description">描述</Label>
+                        <Input
+                          id="permission-description"
+                          value={permissionFormData.description}
+                          onChange={(e) => setPermissionFormData({ ...permissionFormData, description: e.target.value })}
+                          placeholder="输入权限描述"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="permission-resource">资源 *</Label>
+                          <Input
+                            id="permission-resource"
+                            value={permissionFormData.resource}
+                            onChange={(e) => setPermissionFormData({ ...permissionFormData, resource: e.target.value })}
+                            placeholder="如: products"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="permission-action">操作 *</Label>
+                          <Input
+                            id="permission-action"
+                            value={permissionFormData.action}
+                            onChange={(e) => setPermissionFormData({ ...permissionFormData, action: e.target.value })}
+                            placeholder="如: create"
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditPermissionDialog(permission)}
-                      >
-                        <Edit className="h-4 w-4" />
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button variant="outline" onClick={() => setIsAddPermissionDialogOpen(false)}>
+                        取消
                       </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeletePermission(permission.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                      <Button onClick={handleAddPermission}>
+                        创建权限
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-        {/* 用户角色管理 */}
-        <TabsContent value="users" className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-xl font-semibold">用户角色管理</h2>
-            <div className="text-sm text-gray-600">
-              点击角色选择器可以修改用户权限
-            </div>
-          </div>
-          
-          <div className="grid gap-4">
-            {users.map(user => (
-              <Card key={user.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium break-words">{user.full_name || user.email}</h3>
-                      <p className="text-sm text-gray-600 break-words mt-1">{user.email}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">{user.user_type}</Badge>
-                        <Badge variant={user.is_verified ? "default" : "secondary"} className="text-xs">
-                          {user.is_verified ? "已验证" : "未验证"}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">当前角色: {user.role || '未设置'}</Badge>
+              <div className="grid gap-3">
+                {permissions.map(permission => (
+                  <Card key={permission.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 mb-2">{permission.name}</h3>
+                          {permission.description && (
+                            <p className="text-sm text-gray-600 mb-2">{permission.description}</p>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{permission.resource}</Badge>
+                            <Badge variant="outline" className="text-xs">{permission.action}</Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditPermissionDialog(permission)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeletePermission(permission.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* 右侧：用户角色管理 */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <UserCheck className="h-5 w-5" />
+                <span>用户角色管理</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {users.map(user => (
+                <div key={user.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-medium text-gray-900 truncate">
+                          {user.full_name || user.email}
+                        </h4>
+                        <p className="text-sm text-gray-600 truncate">{user.email}</p>
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="text-xs">{user.user_type}</Badge>
+                      <Badge variant={user.is_verified ? "default" : "secondary"} className="text-xs">
+                        {user.is_verified ? "已验证" : "未验证"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">角色:</span>
                       <Select
                         value={user.role || ""}
                         onValueChange={(value) => handleUpdateUserRole(user.id, value)}
@@ -628,23 +650,23 @@ export function PermissionsManagement({
                       </Select>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* 角色权限分配 */}
+      {/* 角色权限分配矩阵 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
+            <Settings className="h-5 w-5" />
             <span>角色权限分配</span>
           </CardTitle>
-          <div className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-gray-600 mt-2">
             点击权限按钮可以为角色分配或移除权限。绿色勾表示已分配，灰色叉表示未分配。
-          </div>
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -714,17 +736,6 @@ export function PermissionsManagement({
               暂无角色数据，请先添加角色
             </div>
           )}
-          
-          {/* 调试信息 */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-md">
-            <div className="text-xs text-gray-600">
-              <div>当前权限分配状态：</div>
-              <div>角色数量: {roles.length}</div>
-              <div>权限数量: {permissions.length}</div>
-              <div>已分配权限: {rolePermissions.length}</div>
-              {isUpdatingPermissions && <div className="text-blue-600">正在更新权限...</div>}
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -759,7 +770,7 @@ export function PermissionsManagement({
               取消
             </Button>
             <Button onClick={handleEditRole}>
-              更新角色
+              保存更改
             </Button>
           </div>
         </DialogContent>
@@ -790,23 +801,25 @@ export function PermissionsManagement({
                 placeholder="输入权限描述"
               />
             </div>
-            <div>
-              <Label htmlFor="edit-permission-resource">资源 *</Label>
-              <Input
-                id="edit-permission-resource"
-                value={permissionFormData.resource}
-                onChange={(e) => setPermissionFormData({ ...permissionFormData, resource: e.target.value })}
-                placeholder="如: products, users, orders"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-permission-action">操作 *</Label>
-              <Input
-                id="edit-permission-action"
-                value={permissionFormData.action}
-                onChange={(e) => setPermissionFormData({ ...permissionFormData, action: e.target.value })}
-                placeholder="如: create, read, update, delete"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-permission-resource">资源 *</Label>
+                <Input
+                  id="edit-permission-resource"
+                  value={permissionFormData.resource}
+                  onChange={(e) => setPermissionFormData({ ...permissionFormData, resource: e.target.value })}
+                  placeholder="如: products"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-permission-action">操作 *</Label>
+                <Input
+                  id="edit-permission-action"
+                  value={permissionFormData.action}
+                  onChange={(e) => setPermissionFormData({ ...permissionFormData, action: e.target.value })}
+                  placeholder="如: create"
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-end space-x-2 pt-4">
@@ -814,7 +827,7 @@ export function PermissionsManagement({
               取消
             </Button>
             <Button onClick={handleEditPermission}>
-              更新权限
+              保存更改
             </Button>
           </div>
         </DialogContent>
