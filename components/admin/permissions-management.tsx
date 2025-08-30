@@ -575,7 +575,12 @@ export function PermissionsManagement({
 
         {/* 用户角色管理 */}
         <TabsContent value="users" className="space-y-6">
-          <h2 className="text-xl font-semibold">用户角色管理</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">用户角色管理</h2>
+            <div className="text-sm text-gray-600">
+              点击角色选择器可以修改用户权限
+            </div>
+          </div>
           
           <div className="grid gap-4">
             {users.map(user => (
@@ -590,6 +595,7 @@ export function PermissionsManagement({
                         <Badge variant={user.is_verified ? "default" : "secondary"}>
                           {user.is_verified ? "已验证" : "未验证"}
                         </Badge>
+                        <Badge variant="outline">当前角色: {user.role || '未设置'}</Badge>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -603,7 +609,12 @@ export function PermissionsManagement({
                         <SelectContent>
                           {roles.map(role => (
                             <SelectItem key={role.id} value={role.name}>
-                              {role.name}
+                              <div className="flex items-center space-x-2">
+                                <span>{role.name}</span>
+                                {role.is_system && (
+                                  <Badge variant="outline" className="text-xs">系统</Badge>
+                                )}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
