@@ -54,9 +54,12 @@ const productData = {
 创建了新的 SQL 脚本 `scripts/008_fix_products_rls.sql`：
 
 ```sql
--- 删除有问题的策略
+-- 修复products表的RLS策略，确保卖家可以管理自己的所有商品
+-- 删除有问题的策略（使用 IF EXISTS 避免错误）
 DROP POLICY IF EXISTS "products_select_all" ON public.products;
 DROP POLICY IF EXISTS "products_select_active" ON public.products;
+DROP POLICY IF EXISTS "sellers_manage_own_products" ON public.products;
+DROP POLICY IF EXISTS "admin_manage_all_products" ON public.products;
 
 -- 重新创建正确的策略
 -- 1. 所有人都可以查看已激活的商品（用于商城展示）
@@ -75,6 +78,15 @@ CREATE POLICY "admin_manage_all_products" ON public.products
       WHERE id = auth.uid() AND user_type = 'admin'
     )
   );
+
+-- 4. 确保RLS已启用
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+-- 验证策略
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check 
+FROM pg_policies 
+WHERE tablename = 'products' 
+ORDER BY policyname;
 ```
 
 **修复效果**:
@@ -144,6 +156,103 @@ const [formData, setFormData] = useState({
 })
 ```
 
+## 部署步骤
+
+### 1. 执行数据库修复脚本
+
+**方法一：使用 psql 命令行**
+```bash
+# 连接到数据库并执行
+psql -d your_database -f scripts/008_fix_products_rls.sql
+```
+
+**方法二：使用 Supabase Dashboard**
+1. 登录 Supabase Dashboard
+2. 选择你的项目
+3. 进入 SQL Editor
+4. 复制粘贴脚本内容并执行
+
+**方法三：使用其他数据库客户端**
+- 在 pgAdmin、DBeaver 等客户端中执行脚本
+
+### 2. 验证脚本执行结果
+
+执行脚本后，应该看到类似这样的输出：
+```
+DROP POLICY
+DROP POLICY
+DROP POLICY
+DROP POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+ALTER TABLE
+ schemaname | tablename | policyname | permissive | roles | cmd | qual | with_check 
+------------+-----------+------------+------------+-------+-----+------+-----------
+ public     | products  | admin_manage_all_products | t | {} | ALL | ... | 
+ public     | products  | products_select_active | t | {} | SELECT | ... | 
+ public     | products  | sellers_manage_own_products | t | {} | ALL | ... | 
+(3 rows)
+```
+
+### 3. 重启应用
+
+确保新的 RLS 策略生效：
+```bash
+# 重启 Next.js 应用
+npm run dev
+# 或
+npm run build && npm start
+```
+
+### 4. 验证修复
+
+1. 访问 `/seller/products` 页面
+2. 点击任意商品的编辑按钮
+3. 验证编辑页面正常加载
+4. 修改商品信息并保存
+5. 确认状态保持不变
+
+## 错误处理和故障排除
+
+### 常见错误及解决方案
+
+#### 1. 策略已存在错误
+```
+ERROR: 42710: policy "sellers_manage_own_products" for table "products" already exists
+```
+
+**解决方案**: 脚本已经使用 `DROP POLICY IF EXISTS` 语法，会自动处理已存在的策略。
+
+#### 2. 权限不足错误
+```
+ERROR: permission denied for table products
+```
+
+**解决方案**: 确保执行脚本的用户有足够的权限，或者联系数据库管理员。
+
+#### 3. 表不存在错误
+```
+ERROR: relation "products" does not exist
+```
+
+**解决方案**: 检查表名是否正确，或者先创建必要的表结构。
+
+### 回滚方案
+
+如果修复后出现问题，可以回滚到原始策略：
+
+```sql
+-- 删除修复后的策略
+DROP POLICY IF EXISTS "products_select_active" ON public.products;
+DROP POLICY IF EXISTS "sellers_manage_own_products" ON public.products;
+DROP POLICY IF EXISTS "admin_manage_all_products" ON public.products;
+
+-- 恢复原始策略（根据你的原始设置调整）
+CREATE POLICY "products_select_all" ON public.products 
+  FOR SELECT USING (status = 'approved');
+```
+
 ## 测试验证
 
 ### 1. 数据库策略测试
@@ -171,33 +280,6 @@ ORDER BY policyname;
 - ✅ 非卖家用户无法访问编辑页面
 - ✅ 未登录用户重定向到登录页面
 
-## 部署步骤
-
-### 1. 执行数据库修复脚本
-
-```bash
-# 连接到数据库并执行
-psql -d your_database -f scripts/008_fix_products_rls.sql
-```
-
-### 2. 重启应用
-
-确保新的 RLS 策略生效：
-```bash
-# 重启 Next.js 应用
-npm run dev
-# 或
-npm run build && npm start
-```
-
-### 3. 验证修复
-
-1. 访问 `/seller/products` 页面
-2. 点击任意商品的编辑按钮
-3. 验证编辑页面正常加载
-4. 修改商品信息并保存
-5. 确认状态保持不变
-
 ## 总结
 
 通过修复 RLS 策略冲突和表单状态处理逻辑，成功解决了商品编辑功能的问题：
@@ -218,5 +300,11 @@ npm run build && npm start
 - 状态保持逻辑合理
 - 表单预填充正确
 - 错误处理完善
+
+### 🚀 部署要点
+- 使用 `DROP POLICY IF EXISTS` 避免策略冲突
+- 脚本可以安全地重复执行
+- 包含完整的验证和回滚方案
+- 详细的错误处理说明
 
 现在卖家可以正常编辑自己的所有商品，无论商品处于什么状态！

@@ -1,7 +1,9 @@
 -- 修复products表的RLS策略，确保卖家可以管理自己的所有商品
--- 删除有问题的策略
+-- 删除有问题的策略（使用 IF EXISTS 避免错误）
 DROP POLICY IF EXISTS "products_select_all" ON public.products;
 DROP POLICY IF EXISTS "products_select_active" ON public.products;
+DROP POLICY IF EXISTS "sellers_manage_own_products" ON public.products;
+DROP POLICY IF EXISTS "admin_manage_all_products" ON public.products;
 
 -- 重新创建正确的策略
 -- 1. 所有人都可以查看已激活的商品（用于商城展示）
