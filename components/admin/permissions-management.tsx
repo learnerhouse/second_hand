@@ -360,7 +360,7 @@ export function PermissionsManagement({
   }
 
   return (
-    <div className="max-w-full space-y-6">
+    <div className="w-full max-w-none space-y-6">
       {/* 页面标题和统计信息 */}
       <div className="space-y-4">
         <div>
@@ -388,18 +388,18 @@ export function PermissionsManagement({
       {/* 主要内容区域 */}
       <div className="space-y-6">
         {/* 角色和权限管理标签页 */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>角色和权限管理</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="w-full">
             <Tabs defaultValue="roles" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="roles" className="flex items-center space-x-2">
+              <TabsList className="flex w-full">
+                <TabsTrigger value="roles" className="flex-1 flex items-center justify-center space-x-2">
                   <Shield className="h-4 w-4" />
                   <span>角色管理</span>
                 </TabsTrigger>
-                <TabsTrigger value="permissions" className="flex items-center space-x-2">
+                <TabsTrigger value="permissions" className="flex-1 flex items-center justify-center space-x-2">
                   <Key className="h-4 w-4" />
                   <span>权限管理</span>
                 </TabsTrigger>
@@ -601,14 +601,14 @@ export function PermissionsManagement({
         </Card>
 
         {/* 用户角色管理 */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <UserCheck className="h-5 w-5" />
               <span>用户角色管理</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="w-full">
             <div className="space-y-4">
               {users.map(user => (
                 <div key={user.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -658,7 +658,7 @@ export function PermissionsManagement({
         </Card>
 
         {/* 角色权限分配矩阵 */}
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Settings className="h-5 w-5" />
@@ -668,69 +668,73 @@ export function PermissionsManagement({
               点击权限按钮可以为角色分配或移除权限。绿色勾表示已分配，灰色叉表示未分配。
             </p>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <div className="min-w-full inline-block align-middle">
-                <div className="overflow-hidden border rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          角色
-                        </th>
-                        {permissions.map(permission => (
-                          <th key={permission.id} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="max-w-[100px]">
-                              <div className="font-semibold text-gray-900 text-xs">{permission.name}</div>
-                              <div className="text-gray-500 text-[10px] mt-1 break-words">
-                                {permission.resource}.{permission.action}
-                              </div>
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {roles.map(role => (
-                        <tr key={role.id} className="hover:bg-gray-50">
-                          <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div className="flex items-center space-x-2">
-                              <span className="break-words">{role.name}</span>
-                              {role.is_system && (
-                                <Badge variant="outline" className="text-xs flex-shrink-0">系统</Badge>
-                              )}
-                            </div>
-                          </td>
-                          {permissions.map(permission => (
-                            <td key={permission.id} className="px-3 py-3 text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleToggleRolePermission(role.id, permission.id)}
-                                disabled={isUpdatingPermissions}
-                                className={`h-8 w-8 p-0 transition-all duration-200 ${
-                                  hasPermission(role.id, permission.id)
-                                    ? "text-green-600 hover:text-green-700 hover:bg-green-50"
-                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                } ${isUpdatingPermissions ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title={`${hasPermission(role.id, permission.id) ? '移除' : '分配'} ${permission.name} 权限`}
-                              >
-                                {isUpdatingPermissions ? (
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                                ) : hasPermission(role.id, permission.id) ? (
-                                  <CheckCircle className="h-4 w-4" />
-                                ) : (
-                                  <XCircle className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </td>
-                          ))}
-                        </tr>
+          <CardContent className="w-full">
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="w-full table-fixed">
+                <colgroup>
+                  <col className="w-32" />
+                  {permissions.map(() => (
+                    <col key={Math.random()} className="w-20" />
+                  ))}
+                </colgroup>
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      角色
+                    </th>
+                    {permissions.map(permission => (
+                      <th key={permission.id} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div className="max-w-[80px] mx-auto">
+                          <div className="font-semibold text-gray-900 text-xs truncate" title={permission.name}>
+                            {permission.name}
+                          </div>
+                          <div className="text-gray-500 text-[10px] mt-1 truncate" title={`${permission.resource}.${permission.action}`}>
+                            {permission.resource}.{permission.action}
+                          </div>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {roles.map(role => (
+                    <tr key={role.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-3 text-sm font-medium text-gray-900">
+                        <div className="flex items-center space-x-2">
+                          <span className="truncate" title={role.name}>{role.name}</span>
+                          {role.is_system && (
+                            <Badge variant="outline" className="text-xs flex-shrink-0">系统</Badge>
+                          )}
+                        </div>
+                      </td>
+                      {permissions.map(permission => (
+                        <td key={permission.id} className="px-3 py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleRolePermission(role.id, permission.id)}
+                            disabled={isUpdatingPermissions}
+                            className={`h-8 w-8 p-0 transition-all duration-200 ${
+                              hasPermission(role.id, permission.id)
+                                ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                                : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            } ${isUpdatingPermissions ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={`${hasPermission(role.id, permission.id) ? '移除' : '分配'} ${permission.name} 权限`}
+                          >
+                            {isUpdatingPermissions ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                            ) : hasPermission(role.id, permission.id) ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </td>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             
             {permissions.length === 0 && (
