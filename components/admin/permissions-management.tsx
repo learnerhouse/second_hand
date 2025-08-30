@@ -69,6 +69,7 @@ export function PermissionsManagement({
   const [isEditPermissionDialogOpen, setIsEditPermissionDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [editingPermission, setEditingPermission] = useState<Permission | null>(null)
+  const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false)
   
   const [roleFormData, setRoleFormData] = useState({
     name: "",
@@ -271,9 +272,13 @@ export function PermissionsManagement({
 
   // 角色权限管理
   const handleToggleRolePermission = async (roleId: string, permissionId: string) => {
+    if (isUpdatingPermissions) return // 防止重复点击
+    
     const existingRolePermission = rolePermissions.find(
       rp => rp.role_id === roleId && rp.permission_id === permissionId
     )
+
+    setIsUpdatingPermissions(true)
 
     try {
       if (existingRolePermission) {
@@ -306,6 +311,8 @@ export function PermissionsManagement({
     } catch (error) {
       console.error("更新角色权限失败:", error)
       toast.error("更新角色权限失败")
+    } finally {
+      setIsUpdatingPermissions(false)
     }
   }
 
@@ -358,14 +365,14 @@ export function PermissionsManagement({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       <div>
         <h1 className="text-2xl font-bold">权限管理</h1>
         <p className="text-gray-600">管理系统角色、权限和用户角色分配</p>
       </div>
 
       <Tabs defaultValue="roles" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="roles" className="flex items-center space-x-2">
             <Shield className="h-4 w-4" />
             <span>角色管理</span>
@@ -382,7 +389,7 @@ export function PermissionsManagement({
 
         {/* 角色管理 */}
         <TabsContent value="roles" className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-xl font-semibold">角色管理</h2>
             <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
               <DialogTrigger asChild>
@@ -431,12 +438,12 @@ export function PermissionsManagement({
             {roles.map(role => (
               <Card key={role.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{role.name}</h3>
-                      <p className="text-sm text-gray-600">{role.description}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant={role.is_system ? "default" : "secondary"}>
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{role.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{role.description}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge variant={role.is_system ? "default" : "secondary"} className="text-xs">
                           {role.is_system ? "系统角色" : "自定义角色"}
                         </Badge>
                         <span className="text-xs text-gray-500">
@@ -444,7 +451,7 @@ export function PermissionsManagement({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -471,7 +478,7 @@ export function PermissionsManagement({
 
         {/* 权限管理 */}
         <TabsContent value="permissions" className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-xl font-semibold">权限管理</h2>
             <Dialog open={isAddPermissionDialogOpen} onOpenChange={setIsAddPermissionDialogOpen}>
               <DialogTrigger asChild>
@@ -538,19 +545,19 @@ export function PermissionsManagement({
             {permissions.map(permission => (
               <Card key={permission.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{permission.name}</h3>
-                      <p className="text-sm text-gray-600">{permission.description}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline">{permission.resource}</Badge>
-                        <Badge variant="outline">{permission.action}</Badge>
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{permission.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{permission.description}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">{permission.resource}</Badge>
+                        <Badge variant="outline" className="text-xs">{permission.action}</Badge>
                         <span className="text-xs text-gray-500">
                           创建时间: {new Date(permission.created_at).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -575,7 +582,7 @@ export function PermissionsManagement({
 
         {/* 用户角色管理 */}
         <TabsContent value="users" className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="text-xl font-semibold">用户角色管理</h2>
             <div className="text-sm text-gray-600">
               点击角色选择器可以修改用户权限
@@ -586,24 +593,24 @@ export function PermissionsManagement({
             {users.map(user => (
               <Card key={user.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">{user.full_name || user.email}</h3>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline">{user.user_type}</Badge>
-                        <Badge variant={user.is_verified ? "default" : "secondary"}>
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{user.full_name || user.email}</h3>
+                      <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">{user.user_type}</Badge>
+                        <Badge variant={user.is_verified ? "default" : "secondary"} className="text-xs">
                           {user.is_verified ? "已验证" : "未验证"}
                         </Badge>
-                        <Badge variant="outline">当前角色: {user.role || '未设置'}</Badge>
+                        <Badge variant="outline" className="text-xs">当前角色: {user.role || '未设置'}</Badge>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex-shrink-0">
                       <Select
                         value={user.role || ""}
                         onValueChange={(value) => handleUpdateUserRole(user.id, value)}
                       >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-full lg:w-40">
                           <SelectValue placeholder="选择角色" />
                         </SelectTrigger>
                         <SelectContent>
@@ -635,18 +642,21 @@ export function PermissionsManagement({
             <Shield className="h-5 w-5" />
             <span>角色权限分配</span>
           </CardTitle>
+          <div className="text-sm text-gray-600 mt-2">
+            点击权限按钮可以为角色分配或移除权限。绿色勾表示已分配，灰色叉表示未分配。
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">角色</th>
+                  <th className="text-left p-3 font-medium text-gray-900 bg-gray-50">角色</th>
                   {permissions.map(permission => (
-                    <th key={permission.id} className="text-center p-2">
-                      <div className="text-xs">
-                        <div>{permission.name}</div>
-                        <div className="text-gray-500">{permission.resource}.{permission.action}</div>
+                    <th key={permission.id} className="text-center p-3 font-medium text-gray-900 bg-gray-50">
+                      <div className="text-xs max-w-[120px]">
+                        <div className="font-semibold text-gray-900">{permission.name}</div>
+                        <div className="text-gray-500 text-[10px] mt-1">{permission.resource}.{permission.action}</div>
                       </div>
                     </th>
                   ))}
@@ -654,24 +664,35 @@ export function PermissionsManagement({
               </thead>
               <tbody>
                 {roles.map(role => (
-                  <tr key={role.id} className="border-b">
-                    <td className="p-2 font-medium">{role.name}</td>
+                  <tr key={role.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-medium text-gray-900">
+                      <div className="flex items-center space-x-2">
+                        <span>{role.name}</span>
+                        {role.is_system && (
+                          <Badge variant="outline" className="text-xs">系统</Badge>
+                        )}
+                      </div>
+                    </td>
                     {permissions.map(permission => (
-                      <td key={permission.id} className="text-center p-2">
+                      <td key={permission.id} className="text-center p-3">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleRolePermission(role.id, permission.id)}
-                          className={`h-8 w-8 p-0 ${
+                          disabled={isUpdatingPermissions}
+                          className={`h-10 w-10 p-0 transition-all duration-200 ${
                             hasPermission(role.id, permission.id)
-                              ? "text-green-600 hover:text-green-700"
-                              : "text-gray-400 hover:text-gray-600"
-                          }`}
+                              ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                              : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                          } ${isUpdatingPermissions ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={`${hasPermission(role.id, permission.id) ? '移除' : '分配'} ${permission.name} 权限`}
                         >
-                          {hasPermission(role.id, permission.id) ? (
-                            <CheckCircle className="h-5 w-5" />
+                          {isUpdatingPermissions ? (
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                          ) : hasPermission(role.id, permission.id) ? (
+                            <CheckCircle className="h-6 w-6" />
                           ) : (
-                            <XCircle className="h-5 w-5" />
+                            <XCircle className="h-6 w-6" />
                           )}
                         </Button>
                       </td>
@@ -680,6 +701,29 @@ export function PermissionsManagement({
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {permissions.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              暂无权限数据，请先添加权限
+            </div>
+          )}
+          
+          {roles.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              暂无角色数据，请先添加角色
+            </div>
+          )}
+          
+          {/* 调试信息 */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-md">
+            <div className="text-xs text-gray-600">
+              <div>当前权限分配状态：</div>
+              <div>角色数量: {roles.length}</div>
+              <div>权限数量: {permissions.length}</div>
+              <div>已分配权限: {rolePermissions.length}</div>
+              {isUpdatingPermissions && <div className="text-blue-600">正在更新权限...</div>}
+            </div>
           </div>
         </CardContent>
       </Card>
