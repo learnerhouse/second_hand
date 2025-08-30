@@ -80,7 +80,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         ...formData,
         price: Number.parseFloat(formData.price),
         seller_id: user.id,
-        status,
+        status: product ? product.status : status, // 编辑时保持原状态，新建时使用传入状态
       }
 
       if (product) {
@@ -102,7 +102,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   }
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, "pending")}>
+    <form onSubmit={(e) => handleSubmit(e, product?.status || "pending")}>
       <div className="space-y-6">
         <Card>
           <CardHeader>
