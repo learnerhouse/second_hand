@@ -16,16 +16,42 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   // 获取用户信息
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (userError) {
+    console.error("Auth error:", userError)
     redirect("/auth/login")
   }
 
-  // 获取用户资料
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!user) {
+    console.log("No user found, redirecting to login")
+    redirect("/auth/login")
+  }
 
-  if (!profile || profile.user_type !== "seller") {
+  console.log("User authenticated:", user.id)
+
+  // 获取用户资料
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single()
+
+  if (profileError) {
+    console.error("Profile error:", profileError)
+    redirect("/marketplace")
+  }
+
+  if (!profile) {
+    console.log("No profile found, redirecting to marketplace")
+    redirect("/marketplace")
+  }
+
+  console.log("User profile:", { user_type: profile.user_type, email: profile.email })
+
+  if (profile.user_type !== "seller") {
+    console.log("User is not seller, redirecting to marketplace")
     redirect("/marketplace")
   }
 
@@ -40,16 +66,29 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     .eq("seller_id", user.id)
     .single()
 
-  if (productError || !product) {
+  if (productError) {
+    console.error("Product query error:", productError)
     redirect("/seller/products")
   }
 
+  if (!product) {
+    console.log("Product not found or not owned by user, redirecting to products list")
+    redirect("/seller/products")
+  }
+
+  console.log("Product found:", { id: product.id, title: product.title, status: product.status })
+
   // 获取分类列表
-  const { data: categories } = await supabase
+  const { data: categories, error: categoriesError } = await supabase
     .from("categories")
     .select("*")
     .eq("is_active", true)
     .order("sort_order")
+
+  if (categoriesError) {
+    console.error("Categories error:", categoriesError)
+    // 不重定向，使用空数组
+  }
 
   return (
     <SellerLayout user={user} profile={profile}>
@@ -57,6 +96,9 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         <div>
           <h1 className="text-3xl font-bold text-gray-900">编辑商品</h1>
           <p className="text-gray-600">修改商品信息</p>
+          <div className="mt-2 text-sm text-gray-500">
+            商品ID: {params.id} | 状态: {product.status}
+          </div>
         </div>
 
         <ProductForm categories={categories || []} product={product} />
