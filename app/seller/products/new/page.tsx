@@ -19,9 +19,12 @@ export default async function NewProductPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile || (profile.user_type !== "seller" && profile.user_type !== "admin")) {
+  if (!profile) {
     redirect("/marketplace")
   }
+
+  // 现在所有user角色都可以发布商品
+  console.log("User profile:", { user_type: profile.user_type, email: profile.email })
 
   // 获取分类
   const { data: categories } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order")

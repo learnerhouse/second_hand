@@ -19,9 +19,12 @@ export default async function SellerProductsPage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile || (profile.user_type !== "seller" && profile.user_type !== "admin")) {
+  if (!profile) {
     redirect("/marketplace")
   }
+
+  // 现在所有user角色都可以管理商品
+  console.log("User profile:", { user_type: profile.user_type, email: profile.email })
 
   // 获取商家的商品
   const { data: products } = await supabase

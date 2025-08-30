@@ -50,10 +50,13 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
   console.log("User profile:", { user_type: profile.user_type, email: profile.email })
 
-  if (profile.user_type !== "seller") {
-    console.log("User is not seller, redirecting to marketplace")
+  // 检查用户是否有权限编辑商品（现在所有user角色都可以）
+  if (!profile) {
+    console.log("No profile found, redirecting to marketplace")
     redirect("/marketplace")
   }
+
+  console.log("User profile:", { user_type: profile.user_type, email: profile.email })
 
   // 获取要编辑的商品
   const { data: product, error: productError } = await supabase
