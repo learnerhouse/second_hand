@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { X, Upload, Plus } from "lucide-react"
+import { X, Upload, Plus, Trash2, Image as ImageIcon } from "lucide-react"
 
 interface Category {
   id: string
@@ -28,8 +28,10 @@ interface ProductFormProps {
 export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadingImages, setUploadingImages] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     title: product?.title || "",
@@ -65,6 +67,103 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     }))
   }
 
+  // 图片上传相关函数
+  const handleImageSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const newImages: string[] = []
+    const maxImages = 5
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+
+    // 检查图片数量限制
+    if (formData.images.length + files.length > maxImages) {
+      setError(`最多只能上传 ${maxImages} 张图片`)
+      return
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      
+      // 检查文件类型
+      if (!allowedTypes.includes(file.type)) {
+        setError(`不支持的文件类型: ${file.name}，请使用 JPG、PNG 或 WebP 格式`)
+        continue
+      }
+
+      // 检查文件大小（限制为 5MB）
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`文件过大: ${file.name}，请选择小于 5MB 的图片`)
+        continue
+      }
+
+      try {
+        const imageUrl = await uploadImageToSupabase(file)
+        if (imageUrl) {
+          newImages.push(imageUrl)
+        }
+      } catch (error) {
+        console.error('图片上传失败:', error)
+        setError(`图片上传失败: ${file.name}`)
+      }
+    }
+
+    if (newImages.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...newImages],
+      }))
+      setError(null)
+    }
+
+    // 清空文件输入
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      
+      if (!user) throw new Error("用户未登录")
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName)
+
+      return publicUrl
+    } catch (error) {
+      console.error('上传到Supabase失败:', error)
+      throw error
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent, status = "draft") => {
     e.preventDefault()
     setIsLoading(true)
@@ -80,7 +179,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         ...formData,
         price: Number.parseFloat(formData.price),
         seller_id: user.id,
-        status,
+        status: product ? product.status : status, // 编辑时保持原状态，新建时使用传入状态
       }
 
       if (product) {
@@ -102,7 +201,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   }
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, "pending")}>
+    <form onSubmit={(e) => handleSubmit(e, product?.status || "pending")}>
       <div className="space-y-6">
         <Card>
           <CardHeader>
@@ -232,25 +331,70 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             <CardTitle>商品图片</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">点击上传或拖拽图片到此处</p>
-              <p className="text-sm text-gray-500">支持 JPG、PNG 格式，最多 5 张图片</p>
-              <Button type="button" variant="outline" className="mt-4 bg-transparent">
-                选择图片
-              </Button>
+            <div className="space-y-4">
+              {/* 隐藏的文件输入 */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+
+              {/* 图片预览区域 */}
+              {formData.images.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {formData.images.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image}
+                        alt={`商品图片 ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 上传区域 */}
+              {formData.images.length < 5 && (
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                  onClick={handleImageSelect}
+                >
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">点击上传或拖拽图片到此处</p>
+                  <p className="text-sm text-gray-500">支持 JPG、PNG、WebP 格式，最多 5 张图片，每张不超过 5MB</p>
+                  <Button type="button" variant="outline" className="mt-4 bg-transparent">
+                    选择图片
+                  </Button>
+                </div>
+              )}
+
+              {/* 图片数量提示 */}
+              <div className="text-sm text-gray-500 text-center">
+                已上传 {formData.images.length}/5 张图片
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {error && <div className="text-red-600 text-sm">{error}</div>}
+        {error && <div className="text-red-600 text-sm p-3 bg-red-50 rounded-lg">{error}</div>}
 
         <div className="flex gap-4">
           <Button type="button" onClick={(e) => handleSubmit(e, "draft")} variant="outline" disabled={isLoading}>
             保存草稿
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "发布中..." : "发布商品"}
+            {isLoading ? "保存中..." : (product ? "保存更改" : "发布商品")}
           </Button>
         </div>
       </div>

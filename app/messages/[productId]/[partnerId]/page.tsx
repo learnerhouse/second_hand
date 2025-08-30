@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
+
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = "force-dynamic"
 import { MessagesLayout } from "@/components/messages/messages-layout"
 import { ConversationView } from "@/components/messages/conversation-view"
 
 export default async function ConversationPage({
   params,
 }: {
-  params: { conversationId: string }
+  params: { productId: string; partnerId: string }
 }) {
   const supabase = await createClient()
 
@@ -20,12 +23,11 @@ export default async function ConversationPage({
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // 解析对话ID
-  const [productId, partnerId] = params.conversationId.split("-")
-
-  if (!productId || !partnerId) {
-    notFound()
+  if (!profile) {
+    redirect("/marketplace")
   }
+
+  const { productId, partnerId } = params
 
   // 获取商品信息
   const { data: product } = await supabase
@@ -47,6 +49,15 @@ export default async function ConversationPage({
 
   if (!partner) {
     notFound()
+  }
+
+  // 验证用户是否有权限查看这个对话
+  const isProductOwner = product.seller_id === user.id
+  const isPartner = partnerId === user.id
+  const isBuyer = !isProductOwner && user.id !== partnerId
+
+  if (!isProductOwner && !isPartner && !isBuyer) {
+    redirect("/marketplace")
   }
 
   // 获取对话消息

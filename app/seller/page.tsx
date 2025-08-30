@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = "force-dynamic"
 import { SellerDashboard } from "@/components/seller/seller-dashboard"
 import { SellerLayout } from "@/components/seller/seller-layout"
 

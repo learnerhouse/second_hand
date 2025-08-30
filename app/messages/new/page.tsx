@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect, notFound } from "next/navigation"
+
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = "force-dynamic"
 import { MessagesLayout } from "@/components/messages/messages-layout"
 import { NewMessageForm } from "@/components/messages/new-message-form"
 

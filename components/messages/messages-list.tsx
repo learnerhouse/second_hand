@@ -81,7 +81,7 @@ export function MessagesList({ conversations, currentUser }: MessagesListProps) 
             const isFromCurrentUser = conversation.lastMessage.sender_id === currentUser.id
 
             return (
-              <Link key={conversationId} href={`/messages/${conversationId}`}>
+              <Link key={conversationId} href={`/messages/${conversation.product.id}/${conversation.partner.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">

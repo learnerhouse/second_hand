@@ -47,7 +47,7 @@ export function AdminLayout({ children, user, profile }: AdminLayoutProps) {
 
       <div className="flex">
         {/* 侧边栏 */}
-        <nav className="w-64 bg-white border-r border-gray-200 min-h-screen">
+        <nav className="w-72 bg-white border-r border-gray-200 min-h-screen">
           <div className="p-6">
             <div className="space-y-2">
               {navigation.map((item) => (
@@ -56,8 +56,8 @@ export function AdminLayout({ children, user, profile }: AdminLayoutProps) {
                   href={item.href}
                   className="flex items-center space-x-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{item.name}</span>
                 </Link>
               ))}
             </div>
