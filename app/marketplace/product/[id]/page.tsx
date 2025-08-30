@@ -3,6 +3,9 @@ import { notFound } from "next/navigation"
 import { ProductDetail } from "@/components/marketplace/product-detail"
 import { MarketplaceHeader } from "@/components/marketplace/marketplace-header"
 
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = 'force-dynamic'
+
 export default async function ProductDetailPage({
   params,
 }: {

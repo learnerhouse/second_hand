@@ -3,6 +3,9 @@ import { redirect } from "next/navigation"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { PermissionsManagement } from "@/components/admin/permissions-management"
 
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPermissionsPage() {
   const supabase = await createClient()
 

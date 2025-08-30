@@ -4,6 +4,9 @@ import { CategoryFilter } from "@/components/marketplace/category-filter"
 import { SearchBar } from "@/components/marketplace/search-bar"
 import { MarketplaceHeader } from "@/components/marketplace/marketplace-header"
 
+// 强制动态渲染，因为使用了 cookies
+export const dynamic = 'force-dynamic'
+
 interface SearchParams {
   category?: string
   search?: string
