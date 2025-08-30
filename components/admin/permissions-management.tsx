@@ -438,10 +438,10 @@ export function PermissionsManagement({
             {roles.map(role => (
               <Card key={role.id}>
                 <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{role.name}</h3>
-                      <p className="text-sm text-gray-600 truncate">{role.description}</p>
+                      <h3 className="font-medium break-words">{role.name}</h3>
+                      <p className="text-sm text-gray-600 break-words mt-1">{role.description}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <Badge variant={role.is_system ? "default" : "secondary"} className="text-xs">
                           {role.is_system ? "系统角色" : "自定义角色"}
@@ -545,10 +545,10 @@ export function PermissionsManagement({
             {permissions.map(permission => (
               <Card key={permission.id}>
                 <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{permission.name}</h3>
-                      <p className="text-sm text-gray-600 truncate">{permission.description}</p>
+                      <h3 className="font-medium break-words">{permission.name}</h3>
+                      <p className="text-sm text-gray-600 break-words mt-1">{permission.description}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-xs">{permission.resource}</Badge>
                         <Badge variant="outline" className="text-xs">{permission.action}</Badge>
@@ -593,10 +593,10 @@ export function PermissionsManagement({
             {users.map(user => (
               <Card key={user.id}>
                 <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{user.full_name || user.email}</h3>
-                      <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                      <h3 className="font-medium break-words">{user.full_name || user.email}</h3>
+                      <p className="text-sm text-gray-600 break-words mt-1">{user.email}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-xs">{user.user_type}</Badge>
                         <Badge variant={user.is_verified ? "default" : "secondary"} className="text-xs">
@@ -610,7 +610,7 @@ export function PermissionsManagement({
                         value={user.role || ""}
                         onValueChange={(value) => handleUpdateUserRole(user.id, value)}
                       >
-                        <SelectTrigger className="w-full lg:w-40">
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="选择角色" />
                         </SelectTrigger>
                         <SelectContent>
